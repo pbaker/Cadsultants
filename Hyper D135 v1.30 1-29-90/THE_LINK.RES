@@ -1,0 +1,41 @@
+MY2FUNCS +
+EXPANDED +
+INDICATO +
+MEGATEK  +
+MENUS    +
+PIXELBRD +
+MY10     +
+MY11     +
+MY12     +
+MY13     +
+MY2      +
+MY1SUBR  +
+MY3      +
+MY4      +
+MY5      +
+MY6      +
+MY8      +
+M_DEVICE +
+MY1SEGM  +
+MY7      +
+NO_HARD  +
+c:\emulate\hp_plot\vt100\host_esc +
+c:\emulate\hp_plot\vt100\my_pckb +
+c:\emulate\clipper\INTHAND  +
+c:\emulate\common\READ_CFG +
+c:\emulate\common\DISPLAY  +
+c:\emulate\common\ERROR_LO +
+c:\emulate\common\MMFILTER +
+c:\emulate\common\COMIO    +
+c:\emulate\common\ICU      +
+c:\emulate\common\BIOS     +
+c:\emulate\common\CHOOSE   +
+c:\emulate\common\CUSTREAD +
+c:\emulate\common\MDC_PFK  +
+c:\emulate\common\LIGHTS   +
+\emulate\common\kb_stat +
+\emulate\common\int9 /MAP ,
+d1etc.exe ,,
+c:\lib\ \emulate\clipper\pw_libl
+
+

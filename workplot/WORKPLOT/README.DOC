@@ -1,0 +1,48 @@
+May 1, 1988
+
+WorkPLOT II, Version 1.0 now supports direct plotter output, when
+used with the CADSULTANTS-supplied serial interface board and
+software driver.
+
+Installation & Setup
+
+Install the BOCA RESEARCH interface board as delivered.  The board
+has a 9-pin serial connector and a 25-pin parallel connector. DO
+NOT CONFUSE THE TWO WHEN CONNECTING THE SERIAL PLOTTER!
+
+Use the BOCA RESEARCH diskette to run IOATFIG.EXE.  This program
+is used to set the operational characteristics of the BOCA board:
+
+		- Set PORT A to USER defined ADDRESS = 1E8 hex, with NO
+            interrupt.
+		- PORT B & the PARALLEL PORT should be disabled (for now).
+          - EXIT and SAVE these settings
+
+Use an AT-style 9-pin to 25-pin serial adapter cable to connect
+the plotter to the PORT A connection (the small, 9-pin connecter
+on the BOCA board).
+
+Use the CADSULTANTS' WorkPLOT diskette to run PLOTTER.COM.  This
+loads the special driver which WorkPLOT uses to locate the BOCA
+serial port.  The driver will announce itself and return control
+to DOS.  At this point, run WorkPLOT.COM  which should identify
+itself as WorkPLOT II - Version 1.0.  Other versions will not
+function with the BOCA board.
+
+PLOTTER.COM SHOULD BE RUN ONCE AND ONLY ONCE AFTER BOOTING YOUR
+PC.  Thereafter, WorkPLOT II can be run as many times as required.
+
+The default WorkPLOT II Output Device is set to PLOTTER (this
+replaces the earlier LPT: default).  Output to PLOTTER will be
+directed to the BOCA port.
+
+Currently, PLOTTER output is fixed at 9600 baud, no parity, 8
+data bits and 1 stop bit; most HP plotters can be run with these
+settings.  If other parameters are required, they can be changed
+at the factory. (That's us!).  The next release of WorkPLOT II
+will allow customer changes to communication parameters.  (Be
+patient...  Good things take time!)
+
+Good luck & happy plotting!
+CADSULTANTS, INC.
+201-328-7122

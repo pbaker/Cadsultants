@@ -1,0 +1,329 @@
+Program WorkPlot;
+
+{
+     Program to output Tektronix commands to a number of output
+     devices including line printers, the CRT screen, and various
+     Hewlett Packard plotters.
+--------------------------------------------------------------------------
+}
+
+label
+
+  strt,top,done,change_pen,enter_pen;
+
+const
+
+  windows = 2;
+  default_string = 'DF;';
+  window_color : array [1..windows] of integer
+               = (15,4);
+
+  window_coord : array [1..windows,1..5] of integer
+               = ((5, 2,75,14,1),
+                  (5,17,75,23,1));
+
+  main_menu : array [1..6] of string [40]
+            = ('Input File .............. ',
+               'Output Device ........... ',
+               'Plotter Type ............ ',
+               'Output Scale ............ ',
+               'Pen Assignments',
+               'Generate Plot Data');
+
+  device_menu : array [1..5] of string [40]
+              = ('LPT:','COM1:','COM2:','CRT','Disk File');
+
+type
+  s1                       = string[1];
+  file_length              = string[30];
+  header_length            = string[40];
+  full_line                = string[80];
+  message_array            = array [1..25] of full_line;
+  menu_option_size         = array [1..20] of full_line;
+  add_text_size            = array [1..10] of string [35];
+  color_text_size          = array [1..16] of string [2];
+
+var
+  result,i,number_of_options,menu_response,
+  output_type,op,plotter_type,device_type,
+  numlen,input_type,page,message_count,BufLen,
+  number_of_plotters,x_offset,y_offset            : integer;
+  plotter_res,scale,adjusted_scale,tek2hp_factor  : real;
+  exist                         : boolean;
+  dummy_string                  : s1;
+  header                        : header_length;
+  text_string                   : full_line;
+  diskfile,filename,line_1      : file_length;
+  color_text                    : color_text_size;
+  add_text                      : add_text_size;
+  menu_option,plotter_menu      : menu_option_size;
+  message_string                : message_array;
+  scale_num                     : string [11];
+  Input,Output                  : Text;
+  dummy_ch                      : char;
+
+{$I Frame.pas}
+{$I Title.pas}
+{$I SelectWindow.pas}
+{$I MkWindows.pas}
+{$I KeyInfo.pas}
+{$I PageMgr.pas}
+{$I GetKey.pas}
+{$I Choose.pas}
+{$I Start.pas}
+{$I GetText.pas}
+{$I Inputfile.pas}
+{$I Device.pas}
+{$I Plotter.pas}
+{$I GetNum.pas}
+{$I Output_Scale.pas}
+{$I ChangePen.pas}
+{$I WriteInfo.pas}
+{$I TektoHP.pas}
+
+Begin
+
+top:
+
+   Title;
+{
+     Read Configuration File
+}
+   Assign(Input,'workplot.cfg');
+   Reset(Input);
+   readln(Input,add_text[1]);                    { input filename }
+
+   filename := add_text[1];
+
+   readln(Input,device_type);                    { output device }
+
+   if (device_type = 2) or (device_type = 3) then
+     device_type := 1;
+
+   add_text[2] := device_menu[device_type];
+
+   readln(Input,plotter_type);                   { plotter type }
+
+   readln(Input,scale);                          { output scale }
+   Str(scale:11:8,scale_num);
+   add_text[4] := scale_num;
+
+   readln(Input,add_text[5]);                    { pen assignment filename }
+
+   readln(Input,add_text[6]);                    { output filename }
+   diskfile := add_text[6];
+
+   IF (DEVICE_TYPE =5) THEN
+     add_text[2] := diskfile;
+
+   readln(Input,add_text[7]);                    { plotter configuration file }
+
+   Close(Input);
+{
+     Read Pen Assignment Table
+}
+   Assign(Input,add_text[5]);
+   Reset(Input);
+   for i := 1 to 15 do
+      readln(Input,color_text[i]);
+   Close(Input);
+{
+     Read Plotter Configuration File
+}
+   Assign(Input,add_text[7]);
+   Reset(Input);
+   i := 1;
+   while not eof (Input) do
+   begin
+      readln(Input,plotter_menu[i]);
+      readln(Input);
+      readln(Input);
+      readln(Input);
+      i := i+1;
+   end;
+   number_of_plotters := i-1;
+   add_text[3] := plotter_menu[plotter_type];
+   Reset(Input);
+   for i := 1 to plotter_type do
+   begin
+      readln(Input,text_string);
+      readln(Input,tek2hp_factor);
+      readln(Input,x_offset);
+      readln(Input,y_offset);
+   end;
+   adjusted_scale := scale*tek2hp_factor;
+   Close(Input);
+{
+     Set up windows and main menu options
+}
+   MkWindows;
+
+strt:
+
+   Start(menu_response,op,add_text);
+   case menu_response of
+      -2:
+         goto done;
+      -1:
+         goto top;
+   end; {case}
+
+{
+     Case Based on Operation Selected
+}
+   case op of
+      1:           {Input File}
+      begin
+         Inputfile(menu_response,filename);
+         case menu_response of
+            -2:
+               goto done;
+            -1:
+               goto strt;
+            else
+            begin
+               add_text[1] := filename;
+               goto strt;
+            end;
+         end; {case}
+      end;
+      2:           { Output Device }
+      begin
+         Device(menu_response,device_type,diskfile,add_text);
+         case menu_response of
+            -2:
+               goto done;
+            else
+               goto strt;
+         end; {case}
+      end;
+      3:           { Plotter Type }
+      begin
+         Plotter(menu_response,plotter_type,number_of_plotters,
+                 x_offset,y_offset,adjusted_scale,plotter_menu,
+                 add_text);
+         case menu_response of
+            -2:
+               goto done;
+            else
+               goto strt;
+         end; {case menu_response}
+      end;
+      4:           {Output Scale}
+      begin
+         Output_Scale(menu_response,scale);
+         case menu_response of
+            -2:
+               goto done;
+            else
+            begin
+               Str(scale:11:8,add_text[4]);
+               goto strt;
+            end;
+         end; {case}
+      end;
+      5:           {Change Pen Assignment}
+      begin
+        ChangePen(menu_response,add_text);
+        case menu_response of
+            -2:
+               goto done;
+            -1, 0:
+               goto strt;
+         end; {case}
+      end;
+      6:           { Generate Plot }
+      begin
+         assign(Input,filename)
+         {$I-};reset(Input);{$I+};
+         exist := (IOresult = 0);
+         if not exist then
+         begin
+            writeln;
+            writeln('     Input File Does Not Exist');
+            write  ('     Any key to continue...');
+            read(Kbd,dummy_ch);
+            goto strt;
+         end;
+
+{         assign(Input,filename);
+          reset(Input);
+}
+
+{
+     Check Whether Input File is a picture file (Tek format)
+     or converted file (HP format)
+}
+         readln(Input,line_1);
+         if default_string = line_1 then
+            input_type := 1                 { HP format }
+         else
+            input_type := 2;                { Tek format }
+
+         reset(Input);
+
+{
+     Open Output File if Directed to a Diskfile
+}
+         if device_type = 5 then
+         begin
+            assign(Output,add_text[2]);
+            rewrite(Output);
+         end;
+
+
+        if device_type = 4 then
+        begin
+           Window(1,1,80,25);
+           gotoXY(1,1);
+           TextColor(15);
+           clrscr;
+        end;
+
+         case input_type of
+            1:          { HP format }
+            begin
+               while not eof(Input) do
+               begin
+                  readln(Input,text_string);
+                  WriteInfo(device_type,text_string);
+               end;
+            end;
+            2:          { Tek format }
+            begin
+               adjusted_scale := scale*tek2hp_factor;
+               TektoHP(device_type,x_offset,y_offset,adjusted_scale,
+                       color_text);
+            end;
+         end; {case input_type}
+
+         close(Input);
+
+         if device_type = 5 then
+            close(Output);
+
+      end; {case}
+   end; {case}
+
+   case device_type of
+      4:
+      begin
+         writeln;
+         writeln;
+         write('Any key to continue...');
+         read(Kbd,dummy_ch);
+         ClrScr;
+         Mkwindows;
+      end;
+   end; {case}
+   goto strt;
+
+done:
+
+   Window(1,1,80,25);
+   gotoXY(1,1);
+   TextColor(15);
+   clrscr;
+
+End.
+

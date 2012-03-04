@@ -1,0 +1,45 @@
+
+ Start  Stop   Length Name                   Class
+ 00000H 0441BH 0441CH BELL_LABS_TEXT         CODE
+ 0441CH 08724H 04309H _TEXT                  CODE
+ 08726H 08CFDH 005D8H CHOOSE_TEXT            CODE
+ 08CFEH 08E21H 00124H READMONO_TEXT          CODE
+ 08E22H 08E22H 00000H C_ETEXT                ENDCODE
+ 08E30H 08E98H 00069H BELL_LABS5_DATA        FAR_DATA
+ 08EA0H 08F35H 00096H CHOOSE5_DATA           FAR_DATA
+ 08F40H 091E3H 002A4H FAR_BSS                FAR_BSS
+ 091F0H 09231H 00042H NULL                   BEGDATA
+ 09232H 14289H 0B058H _DATA                  DATA
+ 1428AH 14297H 0000EH CDATA                  DATA
+ 14298H 14298H 00000H XIFB                   DATA
+ 14298H 14298H 00000H XIF                    DATA
+ 14298H 14298H 00000H XIFE                   DATA
+ 14298H 14298H 00000H XIB                    DATA
+ 14298H 14298H 00000H XI                     DATA
+ 14298H 14298H 00000H XIE                    DATA
+ 14298H 14298H 00000H XPB                    DATA
+ 14298H 1429BH 00004H XP                     DATA
+ 1429CH 1429CH 00000H XPE                    DATA
+ 1429CH 1429CH 00000H XCB                    DATA
+ 1429CH 1429CH 00000H XC                     DATA
+ 1429CH 1429CH 00000H XCE                    DATA
+ 1429CH 1429CH 00000H XCFB                   DATA
+ 1429CH 1429CH 00000H XCF                    DATA
+ 1429CH 1429CH 00000H XCFE                   DATA
+ 1429CH 1429FH 00004H EXEC                   DATA
+ 142A0H 142D9H 0003AH CONST                  CONST
+ 142DAH 142E1H 00008H HDR                    MSG
+ 142E2H 143AFH 000CEH MSG                    MSG
+ 143B0H 143B1H 00002H PAD                    MSG
+ 143B2H 143B2H 00001H EPAD                   MSG
+ 143B4H 146B1H 002FEH _BSS                   BSS
+ 146B2H 146B2H 00000H XOB                    BSS
+ 146B2H 146B2H 00000H XO                     BSS
+ 146B2H 146B2H 00000H XOE                    BSS
+ 146C0H 146C0H 00000H c_common               BSS
+ 146C0H 14EBFH 00800H STACK                  STACK
+
+ Origin   Group
+ 091F:0   DGROUP
+
+Program entry point at 0441:0282

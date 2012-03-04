@@ -1,0 +1,27 @@
+1K768X4H.INT   Hitachi 46xx       1024 x 768    16     N    47.1KHz     64MHz
+
+Command_control_register..............(2,3)....:  2 00
+Operation_mode_register...............(4,5)....: C0 38
+Display_control_register..............(6,7)....: C0 00
+Horizontal_sync_register.............(82,83)...: 54 07
+Horizontal_display_register..........(84,85)...:  5 3F
+Vertical_sync_register...............(86,87)...:  3 1A
+Vertical_display_register............(88,89)...: 16 04
+Split_screen_width_(sp1,sp2,sp3)..(8A,8C,8E)...:  3 00  0  0  0  0
+Horizontal_and_vertical_display......(92,93)...:  0  0
+Vertical_window_display_(vws)(vww)...(94,95)...:  0  0
+Vertical_window_display_(vws)(vww)...(96,97)...:  0  0
+Upper_addr__0....................(C0,C2,C4,C6).:  0  0  0  0  0  0  0  0
+Base_addr__1.....................(C8,CA,CC,CE).:  0  0  1 00  0  0  0  0
+Lower_addr__2....................(D0,D2,D4,D6).:  0  0  0  0  0  0  0  0
+Window_addr__3...................(D8,DA,DC,DE).:  0  0  0  0  0  0  0  0
+Zoom_factor..........................(EA)......:     0
+Horizontal_resolution..........................:   400
+Vertical_resolution............................:   300
+Board_address..................................:   3E0
+Number_of_bits.................................:     4
+Mode...(1 = Single)...(2 = Dual)...............:     2
+Aspect_ratio...................................:  4  3
+Sync_on_green...(0 = no)...(1 = yes)...........:  0
+External_sync..(Horz-Vert)..(0 = neg)(1 = pos).:  0  0
+

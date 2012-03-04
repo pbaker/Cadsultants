@@ -1,0 +1,3 @@
+\bin\link @hardlink.res
+
+

@@ -1,0 +1,86 @@
+                          S O F T W A R E   U P D A T E
+ 
+                                - July 23, 1985 -
+
+-------------------------------------------------------------------------------
+Unigraphics Terminal Interface Program
+New Release: 2.0a
+
+I.  Program Operation
+
+Release 2.0a of the UG interface program may be run as follows:
+
+     1)  type UGSPEED <carriage return>
+
+     2)  type UG2 <carriage return>
+
+The first file (UGSPEED.BAT) is a simple macro which sets the
+characteristics of the serial communication ports.
+
+The second file (UG2.EXE) is the executable interface program.
+
+No other files are required.
+  
+
+II.  Major Enhancments
+
+SELECTIVE ERASE
+
+Entities selected for REDISPLAY, BLANKING and similar operations
+will be individually removed from the display.
+
+KEYBOARD SETUP
+
+Function Keys are now programmed directly by UG2.EXE.
+The file named KB2.DAT is no longer required for this purpose.
+
+The keyboard is de-programmed upon EXIT TO DOS.
+
+LOGON MESSAGE
+
+Upon executing UG2.EXE, a logon message will be displayed on the PC screen.
+This message indicates whether the keyboard is setup for UGI or UGII, and 
+instructs the user to switch input to the Graphics Display Keyboard.
+    
+TEXT MODE TOGGLE
+
+The SELECT key is used to switch between large and small character size during
+file maintenance and editing sessions.
+
+This key will now cause a BEEP when LARGE TEXT is selected.
+
+
+
+
+
+
+
+NEW KEY LOCATIONS  
+
+   EXIT TO
+   DOS -    Originally used the COMPOSE CHARACTER key.
+
+            EXIT TO DOS is now moved to the top row
+            function key marked F6 (next to File/Term).
+
+   ESCAPE - Originally used the function key marked BREAK.
+
+	       ESCAPE is now moved to the key NEXT to BREAK, which
+            is marked GRAPH/TEXT.  This key is required by many
+            UG error conditions in order to continue operation.
+
+   BREAK -  The key marked BREAK (previously reprogrammed to
+            send ESCAPE) has been returned to its original function.
+
+            The BREAK key will now send a 250-300 millisecond break
+            sequence to the Host computer.  This key is required
+            by Data General computers.
+
+
+OTHER CHANGES
+
+A red LED on the Graphics Display Keyboard will now flash during
+graphics screen regeneration.  The light indicates a momentary
+keyboard lock condition required by certain program changes which
+are otherwise transparent to the user.
+

@@ -1,0 +1,7 @@
+All files in this directory and subdirectory were copied from a diskette
+labeled "PC WorkWindow II  -  Version 1.07
+         Executable Code for ALL systems 12/21/87"
+
+These programs are believed to be production release worthy for Ver. 1.07
+and should support the 32-button Function Keyboard.
+

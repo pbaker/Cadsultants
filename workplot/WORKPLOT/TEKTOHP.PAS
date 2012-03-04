@@ -1,0 +1,406 @@
+Procedure TektoHP(var device_type,
+                      x_offset,
+                      y_offset        : integer;
+                  var adjusted_scale  : real;
+                  var color_text      : color_text_size);
+{
+         TEKTOHP - Convert Tektronix Commands into HP-GL format
+--------------------------------------------------------------------------
+}
+const
+
+  lt_string : array [1..4] of string [5]
+            = ('LT;','LT-2;','LT-5;','LT-6;');
+  dot_mult = 100;
+
+label
+
+  next_char,control_codes,point_plot_data,vector_data,check_hix,check_lox,
+  continue,draw_point,moveto,check_loy,next_loy,check_extra,escape_sequence,
+  clear_screen,crosshair_display,status_coordinates,esc_23,draw_vector,
+  new_position,genisco_extension,read_genisco_buffer,done,complete;
+
+var
+
+  escape_flag,bypass,pp_flag,graphics_flag,start_flag,
+  pointer,extrax,extray,hiy,hix,lox,xcoord,ycoord,
+  loy_flag,lt_flag,old_lt,xstart,ystart,loy,ch_flag,
+  pd_flag,l,color_value,dot_counter              : integer;
+  pen_number,old_pen_number,dummy_string         : string [1];
+  genisco_buffer,color_number                    : string [2];
+  num2str                                        : array [1..2] of string [10];
+  plotx,ploty                                    : real;
+  ch,response                                    : char;
+
+Begin
+{
+     Initialize pointers and flags
+}
+   pointer        := 0;
+   escape_flag    := 0;
+   graphics_flag  := 0;
+   start_flag     := 0;
+   bypass         := 0;
+   pp_flag        := 0;
+   pd_flag        := 0;
+   lt_flag        := 0;
+   dot_counter    := 1;
+   pen_number     := '0';
+   old_pen_number := '0';
+{
+     Read from input file, convert, and write to output file
+}
+   text_string := 'DF;';
+   WriteInfo(device_type,text_string);
+
+   if device_type = 4 then
+     goto next_char;
+
+   TextColor(window_color[1]+Blink);
+   writeln;
+   write('     Working ');
+   TextColor(window_color[1]);
+
+next_char:
+
+   if eof(Input) then
+      goto complete;
+
+      read(Input,ch);
+
+{   begin
+
+      read(Input,ch);
+      if dot_counter = dot_mult then
+      begin
+         write('.');
+         dot_counter := 1;
+      end
+      else
+      begin
+         dot_counter := dot_counter+1;
+         write(chr(32));
+         write(chr(8));
+      end;
+}
+      if escape_flag = 1 then
+         goto escape_sequence;
+      if ch = #27 then
+      begin
+         escape_flag := 1;
+         goto next_char;
+      end;
+      if ch < #32 then
+         goto control_codes;
+      if ch > #127 then
+         goto next_char;
+      { coordinate data range }
+      if bypass = 1 then
+         goto next_char;
+      { get data type }
+      if pp_flag = 1 then
+         goto point_plot_data;
+      if graphics_flag = 1 then
+         goto vector_data;
+      goto next_char;
+
+control_codes:
+{
+     Possible Control Codes
+}
+   case ch of
+      #13, #31:
+      begin
+         bypass := 0;
+         pp_flag := 0;
+         graphics_flag := 0;
+         goto next_char;
+      end;
+      #7:
+      begin
+         bypass := 0;
+         goto next_char;
+      end;
+   end; {case}
+   { codes which are ignored in bypass condition }
+   if bypass = 1 then
+      goto next_char;
+   case ch of
+      #28:
+      begin
+         graphics_flag := 1;
+         pp_flag := 1;
+      end;
+      #30:
+         graphics_flag := 0;
+      #29:
+      begin
+         graphics_flag := 1;
+         start_flag := 1;
+      end;
+   end; {case}
+   goto next_char;
+
+point_plot_data:
+vector_data:
+{
+     Point-plot and vector data
+}
+   extrax := 0;
+   extray := 0;
+   pointer := pointer+1;
+   if ch > #63 then
+      goto check_lox;
+   if pointer <> 1 then
+      goto check_hix;
+   { high y }
+   hiy := Ord(ch);
+   hiy := 4*(32*(hiy-32));
+   goto next_char;
+
+check_hix:
+   hix := Ord(ch);
+   hix := 4*(32*(hix-32));
+   goto next_char;
+
+check_lox:
+   if ch > #95 then
+      goto check_loy;
+   pointer := 4;
+   lox := Ord(ch);
+   lox := 4*(lox-64);
+
+   xcoord := hix+lox+extrax;
+   ycoord := hiy+loy+extray;
+{
+   writeln('HiY    = ',hiy:8);
+   writeln('LoY    = ',loy:8);
+   writeln('HiX    = ',hix:8);
+   writeln('LoX    = ',lox:8);
+   writeln('XCOORD = ',xcoord:8);
+   writeln('YCOORD = ',ycoord:8);
+}
+   loy_flag := 0;
+   if pp_flag = 1 then
+      goto draw_point;
+
+   if start_flag = 1 then
+      goto moveto;
+
+   goto draw_vector;
+
+continue:
+
+   xstart := xcoord;
+   ystart := ycoord;
+   start_flag := 0;
+   pointer := 0;
+   goto next_char;
+
+draw_point:   { not implemented }
+
+   xstart := xcoord;
+   ystart := ycoord;
+   goto next_char;
+
+moveto:       { raise pen and move to xcoord, ycoord }
+
+   goto new_position;
+
+check_loy:
+
+   if loy_flag <> 0 then
+      goto check_extra;
+
+next_loy:
+
+   loy := Ord(ch);
+   loy := 4*(loy-96);
+   loy_flag := 1;
+   goto next_char;
+
+check_extra:
+
+   extrax := (loy div 4) and 3;
+   extray := (loy div 4) and 12;
+   extray := extray div 4;
+   goto next_loy;
+
+escape_sequence:
+
+   escape_flag := 0;
+   case ch of
+      #71:
+         goto genisco_extension;
+      #12:
+         goto clear_screen;
+      #26:
+         goto crosshair_display;
+      #5:
+         goto status_coordinates;
+      #23:
+         goto esc_23;
+      #96:         { Solid }
+         lt_flag := 1;
+      #99:         { Dashed }
+         lt_flag := 2;
+      #98:         { Centerline }
+         lt_flag := 3;
+      #97:         { Phantom }
+         lt_flag := 4;
+   end; {case}
+
+   if old_lt <> lt_flag then
+   begin
+      text_string := lt_string[lt_flag];
+      WriteInfo(device_type,text_string);
+   end;
+
+   old_lt := lt_flag;
+   goto next_char;
+
+clear_screen:
+
+   graphics_flag := 0;
+   bypass := 0;
+   pp_flag := 0;
+
+   if device_type < 3 then
+   begin
+      writeln(#7);
+      writeln;
+      writeln('     Load New Paper');
+      write('     When Ready, Hit Return to continue...');
+      readln(dummy_string);
+   end;
+
+   text_string := 'DF;';
+   WriteInfo(device_type,text_string);
+   text_string := 'PA0,0;';
+   WriteInfo(device_type,text_string);
+   goto next_char;
+
+crosshair_display:
+
+   bypass := 1;
+   ch_flag := 1;
+   pp_flag := 0;
+   graphics_flag := 0;
+   goto next_char;
+
+status_coordinates:
+
+   goto next_char;
+
+esc_23:
+
+   bypass := 0;
+   goto next_char;
+
+draw_vector:
+
+   if pd_flag = 0 then
+   begin
+      pd_flag := 1;
+      text_string := 'PD;';
+      WriteInfo(device_type,text_string);
+   end;
+
+   if old_pen_number <> pen_number then
+   begin
+      text_string := 'SP'+pen_number+';';
+      WriteInfo(device_type,text_string);
+   end;
+
+   old_pen_number := pen_number;
+   plotx := xcoord*adjusted_scale+x_offset;
+   ploty := ycoord*adjusted_scale+y_offset;
+   str(plotx:7:0,num2str[1]);
+   str(ploty:7:0,num2str[2]);
+   text_string := 'PA'+num2str[1]+','+num2str[2]+';';
+   WriteInfo(device_type,text_string);
+   goto continue;
+
+new_position:
+
+   if pen_number = '0' then
+      goto continue;
+
+   pd_flag := 0;
+   text_string := 'PU;';
+   WriteInfo(device_type,text_string);
+
+   if old_pen_number <> pen_number then
+   begin
+      text_string := 'SP'+pen_number+';';
+      WriteInfo(device_type,text_string);
+   end;
+
+   old_pen_number := pen_number;
+   plotx := xcoord*adjusted_scale+x_offset;
+   ploty := ycoord*adjusted_scale+y_offset;
+   str(plotx:7:0,num2str[1]);
+   str(ploty:7:0,num2str[2]);
+   text_string := 'PA'+num2str[1]+','+num2str[2]+';';
+   WriteInfo(device_type,text_string);
+   goto continue;
+
+genisco_extension:
+
+   if EOF(Input) then
+   begin
+      writeln('     INCOMPLETE FILE !');
+      close(Input);
+      goto done;
+   end;
+
+   read(Input,ch);
+
+   if ch = #13 then
+      begin
+         if copy(genisco_buffer,1,1) = 'C' then
+            begin
+               goto read_genisco_buffer;
+            end;
+         genisco_buffer := '';
+         goto next_char;
+      end;
+
+   genisco_buffer := (genisco_buffer + ch);
+   goto genisco_extension;
+
+read_genisco_buffer:
+
+   l := length(genisco_buffer);
+   color_number := copy(genisco_buffer,2,l-1);
+   color_value := Ord(color_number) - 48;
+   if color_value = 0 then
+      pen_number := '0'
+   else
+      pen_number := color_text[color_value];
+
+   genisco_buffer := '';
+   goto next_char;
+
+{
+  Change pen based on color
+}
+
+{  old_pen_number := pen_number;}
+
+{ pen_number := color_text[color_value];
+  genisco_buffer := '';
+
+  goto next_char;
+}
+complete:
+
+   begin
+      text_string := 'SP0;PU;PA0,0;';
+      WriteInfo(device_type,text_string);
+   end;
+
+done:
+
+End; {procedure : TEKTOHP}
+

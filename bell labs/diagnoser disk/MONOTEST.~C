@@ -1,0 +1,31 @@
+#include "stdio.h"
+#include "dos.h"
+#include "my_utils.h"
+
+
+
+char far *zeke[5] =
+{
+	"Matilda Functions",
+	"Zeke Options",
+	"Zelda's Stories",
+	"Frank Zappa wierd songs",
+	"EXIT TO DOS"
+};
+
+
+int far selection;
+char far *mono_ptr;
+
+
+
+main()
+{
+	FP_SEG(mono_ptr) = 0xb000;
+	FP_OFF(mono_ptr) = 0;
+
+
+	selection = choose_menu("Pick An Option",zeke,5,0);
+
+}
+

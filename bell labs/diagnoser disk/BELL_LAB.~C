@@ -1,0 +1,2531 @@
+#include "stdio.h"
+#include "dos.h"
+#include "stdlib.h"
+#include "string.h"
+#include "my_utils.h"
+
+
+
+
+#define TERMINATE  -1
+#define ENTRY_COMPLETE  -2
+#define REJECT  -3
+
+
+#define TEXT  0
+#define GRAPHICS  1
+
+#define INSIDE  0
+#define OUTSIDE  1
+
+
+extern int far win_y_low,far win_x_low,far win_y_up,far win_x_up;
+
+
+char far system_string[222];
+char far message_monitor = INSIDE;
+char far text_graphics = TEXT;
+FILE far *out_ptr,far *com_ptr = NULL;
+char far a_file[50],far show_flag = 'f';
+int data_char,ch,baud_rate;
+char far *mono_ptr;
+int far last_baud_rate = 4;
+
+char far misc_string[111];
+int far k;
+
+char far press_enter[100] = "Press ENTER To Continue";
+
+
+
+
+unsigned int far uuu;
+
+
+
+
+
+void far show_log_file()
+{
+int num_newlines;
+int ch;
+
+	if(FP_SEG(mono_ptr) == 0xb800)
+	{
+		make_win(0,0,79,24);
+		clear_win(15);
+	}
+
+
+
+	fseek(out_ptr,0L,SEEK_SET);
+
+	num_newlines = 0;
+	for(ch = getc(out_ptr) ; ch != EOF ; ch = getc(out_ptr))
+	{
+		putchar(ch);
+
+		if((ch == 13) || (ch == 10))
+			num_newlines++;
+
+		if(num_newlines == 20)
+		{
+			printf("\n%s\n",press_enter);
+			getch();
+			num_newlines = 0;
+		}
+	}
+
+
+	fseek(out_ptr,0L,SEEK_END);
+
+
+
+	if(FP_SEG(mono_ptr) == 0xb800)
+	{
+		clear_win(15);
+		make_win(10,3,70,20);
+	}
+}
+
+
+
+
+unsigned int far my_atou(the_string)
+char far the_string[];
+{
+int i;
+
+	for(i = 0 ; (the_string[i] >= '0') && (the_string[i] <= '9') ; i++)
+		;
+
+
+	if(i == 0)
+		return(0);
+
+
+	the_string[i] = '\0';
+
+	sscanf(the_string,"%u",&uuu);
+	return(uuu);
+}
+
+
+
+void far write_megatek(ch)
+int ch;
+{
+	megatek_out(ch | 0x40);
+}
+
+
+int far read_megatek()
+{
+int ch;
+
+	ch = read_megatek_buffer();
+
+	while(ch == -1)
+		ch = read_megatek_buffer();
+
+	return(ch & 0x3f);
+}
+
+
+
+
+void far communicate()
+{
+	data_char = read_megatek_buffer();
+	if(data_char != -1)
+	{
+
+		if(show_flag == 't')
+		{
+			printf("_%x ",data_char);
+			if(com_ptr != NULL)
+				fprintf(com_ptr,"_%x ",data_char);
+		}
+
+		ugout(data_char);
+	}
+
+
+	data_char = read_host_buffer();
+	if(data_char != -1)
+	{
+
+		if(show_flag == 't')
+		{
+			printf("%x ",data_char);
+			if(com_ptr != NULL)
+				fprintf(com_ptr,"%x ",data_char);
+		}
+
+		megatek_out(data_char);
+	}
+}
+
+
+
+
+
+void far print_binary(number)
+unsigned int number;
+{
+unsigned int mask;
+
+	for(mask = 0x8000 ; mask > 0 ; mask >>= 1)
+		if((number & mask) != 0)
+			putc('1',out_ptr);
+		else
+			putc('0',out_ptr);
+
+	putc('\n',out_ptr);
+}
+
+
+
+
+
+
+
+void  far display_binary(number)
+unsigned int number;
+{
+unsigned int mask;
+
+	for(mask = 0x8000 ; mask > 0 ; mask >>= 1)
+		if((number & mask) != 0)
+			putchar('1');
+		else
+			putchar('0');
+
+	putchar('\n');
+}
+
+
+
+unsigned int far comp16_3(first,second,third)
+unsigned char first,second,third;
+{
+unsigned int i;
+
+	i = (int)first & 0x0f;
+	i <<= 6;
+	i |= (int)second & 0x3f;
+	i <<= 6;
+	i |= (int)third & 0x3f;
+	return(i);
+}
+
+
+
+
+void far write_insert() /*1*/
+{
+unsigned int response,most_sig,least_sig;
+unsigned char most1,most2,most3,least1,least2,least3;
+
+
+	clear_win(0x70);
+	mono_string("Write At Insert Pointer",win_y_low + 1,
+		win_x_low + 1,0x70);
+/*
+	printf("Enter Word To Write: (Most-Sig.-Half  Least-Sig.-Half)  ");
+	scanf("%u%u",&most_sig,&least_sig);
+*/
+
+	mono_string("Enter Most Significant Half Of DATA",
+		win_y_low + 3,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	most_sig = my_atou(misc_string);
+
+
+	mono_string("Enter Least Significant Half Of DATA",
+		win_y_low + 5,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 6,win_x_low + 4,0x70);
+
+	least_sig = my_atou(misc_string);
+
+
+
+	fprintf(out_ptr,"Write At Insert Pointer: Most Sig. = %u Least Sig. = %u\n",
+			most_sig,least_sig);
+	
+
+	most1 = most_sig >> 12;
+	most2 = (most_sig >> 6) & 0x3f;
+	most3 = most_sig & 0x3f;
+
+	least1 = least_sig >> 12;
+	least2 = (least_sig >> 6) & 0x3f;
+	least3 = least_sig & 0x3f;
+
+	write_megatek(0x6f); /*op code*/
+
+	write_megatek(most1 | 32);
+	write_megatek(most2);
+	write_megatek(most3);
+
+	write_megatek(least1);
+	write_megatek(least2);
+	write_megatek(least3);
+
+	response = read_megatek(); 
+	response = read_megatek(); /*check_sum*/
+	fprintf(out_ptr,"    Check Sum = %u\n",response);
+	
+	response = read_megatek();
+
+	mono_string(press_enter,win_y_low + 8,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+void far write_spec_addr() /*2*/
+{
+unsigned int response,address,most_sig_data,least_sig_data;
+unsigned char address1,address2,address3,most1,most2,most3,
+		least1,least2,least3;
+
+	clear_win(0x70);
+	mono_string("Write Specified Address",win_y_low + 1,
+		win_x_low + 1,0x70);
+/*
+	printf("Enter (Address  Most-Sig.-Data  Least-Sig.-Data)  ");
+	scanf("%u%u%u",&address,&most_sig_data,&least_sig_data);
+*/
+	mono_string("Enter Address To Write At",win_y_low + 3,
+		win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	address = my_atou(misc_string);
+
+
+	mono_string("Enter Most Significant Half Of Data",win_y_low + 5,
+		win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 6,win_x_low + 4,0x70);
+
+	most_sig_data = my_atou(misc_string);
+
+	mono_string("Enter Least Significant Half Of Data",win_y_low + 7,
+		win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 8,win_x_low + 4,0x70);
+
+	least_sig_data = my_atou(misc_string);
+
+
+	fprintf(out_ptr,"Write Spec. Addr.: Addr = %u Most Sig. = %u Least Sig. = %u\n",
+			address,most_sig_data,least_sig_data);
+	
+
+	address1 = address >> 12;
+	address2 = (address >> 6) & 0x3f;
+	address3 = address & 0x3f;
+
+	write_megatek(0x6f); /*op code*/
+
+	write_megatek(address1 | 16);
+	write_megatek(address2);
+	write_megatek(address3);
+
+	most1 = most_sig_data >> 12;
+	most2 = (most_sig_data >> 6) & 0x3f;
+	most3 = most_sig_data & 0x3f;
+
+	write_megatek(most1);
+	write_megatek(most2);
+	write_megatek(most3);
+
+	least1 = least_sig_data >> 12;
+	least2 = (least_sig_data >> 6) & 0x3f;
+	least3 = least_sig_data & 0x3f;
+
+	write_megatek(least1);
+	write_megatek(least2);
+	write_megatek(least3);
+
+	response = read_megatek();
+	response = read_megatek(); /*check sum*/
+	fprintf(out_ptr,"    Check Sum = %u\n",response);
+	
+	response = read_megatek();
+
+	mono_string(press_enter,win_y_low + 10,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+
+
+void far read_spec_addr() /*3*/
+{
+unsigned int address,most_sig_data,least_sig_data;
+unsigned char address1,address2,address3,most1,most2,most3,
+		least1,least2,least3,a_char;
+
+	clear_win(0x70);
+	mono_string("Read Specified Address",win_y_low + 1,win_x_low + 1,0x70);
+
+	mono_string("Enter Address To Read From",win_y_low + 3,win_x_low +3,
+		0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 3,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	address = my_atou(misc_string);
+
+
+	fprintf(out_ptr,"Read Spec. Address: Addr. = %u\n",address);
+
+	address1 = address >> 12;
+	address2 = (address >> 6) & 0x3f;
+	address3 = address & 0x3f;
+
+	write_megatek(0x6f);	/*op code*/
+
+	write_megatek(address1);
+	write_megatek(address2);
+	write_megatek(address3);
+
+	a_char = read_megatek(); /*GS*/
+
+	most1 = read_megatek();
+	most2 = read_megatek();
+	most3 = read_megatek();
+
+	most_sig_data = comp16_3(most1,most2,most3);
+
+	least1 = read_megatek();
+	least2 = read_megatek();
+	least3 = read_megatek();
+
+	a_char = read_megatek(); /*0x0d*/
+
+	least_sig_data = comp16_3(least1,least2,least3);
+
+	sprintf(misc_string,"data = %u  %u",most_sig_data,least_sig_data);
+	mono_string(misc_string,win_y_low + 6,win_x_low + 4,0x70);
+
+
+	fprintf(out_ptr,"    MSD = %6u = ",most_sig_data);
+	print_binary(most_sig_data);
+
+	fprintf(out_ptr,"    LSD = %6u = ",least_sig_data);
+	print_binary(least_sig_data);
+
+	mono_string(press_enter,win_y_low + 8,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+
+void far old_read_pos_id() /*4*/
+{
+unsigned int segment_num,id;
+unsigned char a_char,seg_most,seg_least,id1,id2,id3;
+
+	clear_win(0x70);
+	mono_string("NON-EDLM  Read Current Position ID",
+		win_y_low + 1,win_x_low + 1,0x70);
+
+	write_megatek(0x7c);  /*op code*/
+	write_megatek(0x00);  /*reserved byte*/
+
+	a_char = read_megatek(); /*GS*/
+	a_char = read_megatek(); /*Valid Read Bit , Segment/Subroutine Bit*/
+
+	if((a_char & 16) != 0)  /*Subroutine Read ID*/
+	{
+		mono_string("Subroutine",win_y_low + 3,win_x_low + 3,0x70);
+		fprintf(out_ptr,"Read Pos. ID: Subroutine ");
+	}
+	else  /*Segment Read ID*/
+	{
+		mono_string("Segment",win_y_low + 3,win_x_low + 3,0x70);
+		fprintf(out_ptr,"Read Pos. ID: Segment ");
+	}
+
+	seg_most = read_megatek();
+	seg_least = read_megatek();
+
+	id1 = read_megatek();
+	id2 = read_megatek();
+	id3 = read_megatek();
+
+	a_char = read_megatek(); /*0x0d*/
+
+	segment_num = ((seg_most & 0x3f) << 6) | (seg_least & 0x3f);
+	id = comp16_3(id1,id2,id3);
+
+	sprintf(misc_string," # = %u  ID = %u",segment_num,id);
+	mono_string(misc_string,win_y_low + 4,win_x_low + 5,0x70);
+	fprintf(out_ptr,"# = %u  ID = %u\n",segment_num,id);
+	
+	mono_string(press_enter,win_y_low + 6,win_x_low + 2,0x70);
+	getch();
+}
+
+
+
+
+
+void far new_read_pos_id() /*4*/
+{
+unsigned int segment_num;
+unsigned long id;
+unsigned char a_char,seg_most,seg_least,id1,id2,id3,id4;
+
+
+	clear_win(0x70);
+	mono_string("EDLM Read Current Position ID",
+		win_y_low + 1, win_x_low + 1,0x70);
+
+	write_megatek(0x5b);  /*op code*/
+	write_megatek(0x00);  /*reserved byte*/
+
+	a_char = read_megatek(); /*GS*/
+	a_char = read_megatek(); /*Valid Read Bit , Segment/Subroutine Bit*/
+
+	if((a_char & 16) != 0)  /*Subroutine Read ID*/
+	{
+		mono_string("Subroutine",win_y_low + 3,win_x_low + 3,0x70);
+		fprintf(out_ptr,"Read Pos. ID: Subroutine ");
+	}
+	else  /*Segment Read ID*/
+	{
+		mono_string("Segment",win_y_low + 3,win_x_low + 3,0x70);
+		fprintf(out_ptr,"Read Pos. ID: Segment ");
+	}
+
+	seg_most = read_megatek();
+	seg_least = read_megatek();
+
+	id1 = read_megatek();
+	id2 = read_megatek();
+	id3 = read_megatek();
+	id4 = read_megatek();
+
+	a_char = read_megatek(); /*0x0d*/
+
+	segment_num = ((seg_most & 0x3f) << 6) | (seg_least & 0x3f);
+
+	id = (unsigned long)(id1 & 0x03);
+	id <<= 6;
+	id |= (unsigned long)(id2 & 0x3f);
+	id <<= 6;
+	id |= (unsigned long)(id3 & 0x3f);
+	id <<= 6;
+	id |= (unsigned long)(id4 & 0x3f);
+
+	sprintf(misc_string," # = %u  ID = %lu",segment_num,id);
+	mono_string(misc_string,win_y_low + 4,win_x_low + 5,0x70);
+	fprintf(out_ptr,"# = %u  ID = %lu\n",segment_num,id);
+
+	mono_string(press_enter,win_y_low + 6,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+void far short_rel() /*5*/
+{
+	clear_win(0x70);
+	mono_string("Short Relative Vector  Circle",win_y_low + 1,
+		win_x_low + 1,0x70);
+
+	fprintf(out_ptr,"Short Relative Vectors\n");
+	
+
+	write_megatek('P');  /*move 2D absolute*/
+
+	write_megatek(0x00); /* x */
+	write_megatek(0x00); /* coord */
+
+	write_megatek(0x00); /* y */
+	write_megatek(0x00); /* coord */
+
+
+	write_megatek(0x59); /*short rel op code*/
+
+	write_megatek(0x40);
+	write_megatek(0x6C);
+	write_megatek(0x7D);
+	write_megatek(0x6D);
+	write_megatek(0x6C);
+	write_megatek(0x78);
+	write_megatek(0x6C);
+	write_megatek(0x6C);
+	write_megatek(0x72);
+	write_megatek(0x6B);
+	write_megatek(0x6C);
+	write_megatek(0x6C);
+	write_megatek(0x69);
+	write_megatek(0x6C);
+	write_megatek(0x68);
+	write_megatek(0x65);
+	write_megatek(0x6C);
+	write_megatek(0x63);
+	write_megatek(0x63);
+	write_megatek(0x6C);
+	write_megatek(0x5E);
+	write_megatek(0x5E);
+	write_megatek(0x6C);
+	write_megatek(0x5B);
+	write_megatek(0x5A);
+	write_megatek(0x6C);
+	write_megatek(0x59);
+	write_megatek(0x54);
+	write_megatek(0x6C);
+	write_megatek(0x55);
+	write_megatek(0x50);
+	write_megatek(0x6C);
+	write_megatek(0x54);
+	write_megatek(0x4A);
+	write_megatek(0x6C);
+	write_megatek(0x54);
+	write_megatek(0x44);
+	write_megatek(0x7C);
+	write_megatek(0x53);
+	write_megatek(0x3F);
+	write_megatek(0x7C);
+	write_megatek(0x53);
+	write_megatek(0x79);
+	write_megatek(0x7C);
+	write_megatek(0x55);
+	write_megatek(0x73);
+	write_megatek(0x7C);
+	write_megatek(0x57);
+	write_megatek(0x6E);
+	write_megatek(0x7C);
+	write_megatek(0x5A);
+	write_megatek(0x68);
+	write_megatek(0x7C);
+	write_megatek(0x5D);
+	write_megatek(0x64);
+	write_megatek(0x7C);
+	write_megatek(0x60);
+	write_megatek(0x60);
+	write_megatek(0x7C);
+	write_megatek(0x65);
+	write_megatek(0x5C);
+	write_megatek(0x7C);
+	write_megatek(0x6A);
+	write_megatek(0x59);
+	write_megatek(0x7C);
+	write_megatek(0x70);
+	write_megatek(0x56);
+	write_megatek(0x7C);
+	write_megatek(0x74);
+	write_megatek(0x55);
+	write_megatek(0x7C);
+	write_megatek(0x7A);
+	write_megatek(0x53);
+	write_megatek(0x78);
+	write_megatek(0x40);
+	write_megatek(0x53);
+	write_megatek(0x78);
+	write_megatek(0x46);
+	write_megatek(0x53);
+	write_megatek(0x78);
+	write_megatek(0x4C);
+	write_megatek(0x55);
+	write_megatek(0x78);
+	write_megatek(0x50);
+	write_megatek(0x56);
+	write_megatek(0x78);
+	write_megatek(0x56);
+	write_megatek(0x59);
+	write_megatek(0x78);
+	write_megatek(0x5B);
+	write_megatek(0x5C);
+	write_megatek(0x78);
+	write_megatek(0x60);
+	write_megatek(0x60);
+	write_megatek(0x78);
+	write_megatek(0x63);
+	write_megatek(0x64);
+	write_megatek(0x78);
+	write_megatek(0x66);
+	write_megatek(0x68);
+	write_megatek(0x78);
+	write_megatek(0x69);
+	write_megatek(0x6E);
+	write_megatek(0x78);
+	write_megatek(0x6B);
+	write_megatek(0x73);
+	write_megatek(0x78);
+	write_megatek(0x6D);
+	write_megatek(0x79);
+	write_megatek(0x78);
+	write_megatek(0x6D);
+	write_megatek(0x3F);
+	write_megatek(0x68);
+	write_megatek(0x6C);
+	write_megatek(0x44);
+	write_megatek(0x68);
+	write_megatek(0x6C);
+	write_megatek(0x4A);
+	write_megatek(0x68);
+	write_megatek(0x6B);
+	write_megatek(0x50);
+	write_megatek(0x68);
+	write_megatek(0x67);
+	write_megatek(0x54);
+	write_megatek(0x68);
+	write_megatek(0x65);
+	write_megatek(0x5A);
+	write_megatek(0x68);
+	write_megatek(0x62);
+	write_megatek(0x5E);
+	write_megatek(0x68);
+	write_megatek(0x5D);
+	write_megatek(0x63);
+	write_megatek(0x68);
+	write_megatek(0x58);
+	write_megatek(0x65);
+	write_megatek(0x68);
+	write_megatek(0x54);
+	write_megatek(0x69);
+	write_megatek(0x68);
+	write_megatek(0x4E);
+	write_megatek(0x6B);
+	write_megatek(0x68);
+	write_megatek(0x48);
+	write_megatek(0x6C);
+	write_megatek(0x68);
+	write_megatek(0x43);
+	write_megatek(0x6D);
+	write_megatek(0x40);
+
+	mono_string(press_enter,win_y_low + 5,win_x_low + 5,0x70);
+	getch();
+}
+
+
+
+void  far open_seg()
+{
+unsigned char most_seg,least_seg;
+unsigned int segment;
+
+	clear_win(0x70);
+	mono_string("Open Segment",win_y_low + 1,win_x_low + 1,0x70);
+
+	mono_string("Enter Segment # ",win_y_low + 3,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	segment = my_atou(misc_string);
+
+	fprintf(out_ptr,"Open Segment %u\n",segment);
+	
+
+	most_seg = segment >> 6;
+	least_seg = segment & 0x3f;
+
+	write_megatek(0x40); /*op code*/
+	write_megatek(0x07); /*use display 0 only,transform segment,is
+				visible*/
+	write_megatek(most_seg);
+	write_megatek(least_seg);
+
+
+	mono_string(press_enter,win_y_low + 6,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+
+void far close_seg()
+{
+	clear_win(0x70);
+	mono_string("Close Active Segment",win_y_low + 1,win_x_low + 1,0x70);
+
+	fprintf(out_ptr,"Close Segment\n");
+	
+	write_megatek(0x44);
+
+	mono_string(press_enter,win_y_low + 4,win_x_low + 5,0x70);
+	getch();
+}
+
+
+
+
+
+void far open_sub()
+{
+unsigned char most_sub,least_sub;
+unsigned int subroutine;
+
+	clear_win(0x70);
+	mono_string("Open Subroutine",win_y_low + 1,win_x_low + 1,0x70);
+
+	mono_string("Enter Subroutine # ",win_y_low + 3,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	subroutine = my_atou(misc_string);
+
+	fprintf(out_ptr,"Open Subroutine %u\n",subroutine);
+	
+
+	most_sub = subroutine >> 6;
+	least_sub = subroutine & 0x3f;
+
+	write_megatek(0x60); /*op code*/
+	write_megatek(most_sub);
+	write_megatek(least_sub);
+
+	mono_string(press_enter,win_y_low + 6,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+void far close_sub()
+{
+	clear_win(0x70);
+	mono_string("Close Active Subroutine",
+		win_y_low + 1,win_x_low + 1,0x70);
+
+	fprintf(out_ptr,"Close Subroutine\n");
+	
+	write_megatek(0x64); /*op code*/
+
+	mono_string(press_enter,win_y_low + 5,win_x_low + 5,0x70);
+	getch();
+}
+
+
+
+
+char far *resets_text[4] = 
+{
+	"Software Reset No EDLM",
+	"Hardware Reset No EDLM",
+	"Software Reset Into EDLM",
+	"Hardware Reset Into EDLM"
+};
+
+
+
+
+void far resets() /*23*/
+{
+int selection;
+
+
+	selection = choose_menu("System Resets Menu:",resets_text,4,0);
+
+
+	switch(selection)
+	{
+		case 1 : /*software reset no EDLM*/
+		{
+			mono_string("Software Reset No EDLM",
+				win_y_low + 8,win_x_low + 10,0x70);
+			fprintf(out_ptr,"Software Reset No EDLM\n");
+			write_megatek(0x6e); /*op code*/
+			write_megatek(0x02);	     
+			break;
+		}
+
+		case 2 : /*hardware reset no EDLM*/
+		{
+			mono_string("Hardware Reset No EDLM",
+				win_y_low + 8,win_x_low + 10,0x70);
+			fprintf(out_ptr,"Hardware Reset No EDLM\n");
+			write_megatek(0x6e); /*op code*/
+			write_megatek(0x03);
+			break;
+		}
+
+		case 3 : /*software reset into EDLM*/
+		{
+			mono_string("Software Reset Into EDLM",
+				win_y_low + 8,win_x_low + 10,0x70);
+			fprintf(out_ptr,"Software Reset Into EDLM\n");
+			write_megatek(0x6e); /*op code*/
+			write_megatek(0x06);
+			break;
+		}
+
+		case 4 : /*hardware reset into EDLM*/
+		{
+			mono_string("Hardware Reset Into EDLM",
+				win_y_low + 8,win_x_low + 10,0x70);
+			fprintf(out_ptr,"Hardware Reset Into EDLM\n");
+			write_megatek(0x6e); /*op code*/
+			write_megatek(0x07);
+			break;
+		}
+
+	}
+
+
+	mono_string(press_enter,
+		win_y_low + 10,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+
+
+void far clear_seg() /*24*/
+{
+unsigned int segment_num;
+unsigned char most_seg,least_seg;
+
+	clear_win(0x70);
+	mono_string("Clear Segment",win_y_low + 1,win_x_low + 1,0x70);
+
+	mono_string("Enter Segment # To Be Cleared: ",win_y_low + 3,
+		win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	segment_num = my_atou(misc_string);
+
+	fprintf(out_ptr,"Clear Segment # %d\n",segment_num);
+
+	most_seg = segment_num >> 6;
+	least_seg = segment_num & 0x3f;
+
+	write_megatek(0x42);  /*op code*/
+	write_megatek(most_seg);
+	write_megatek(least_seg);
+
+	mono_string(press_enter,win_y_low + 6,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+
+
+
+void far append_seg() /*25*/
+{
+unsigned int segment_num;
+unsigned char most_seg,least_seg;
+
+	clear_win(0x70);
+	mono_string("Append Segment",win_y_low + 1,win_x_low + 1,0x70);
+
+	mono_string("Enter Segment # To Append To: ",win_y_low + 3,
+		win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	segment_num = my_atou(misc_string);
+
+	fprintf(out_ptr,"Append Segment # %d\n",segment_num);
+
+	most_seg = segment_num >> 6;
+	least_seg = segment_num & 0x3f;
+
+	write_megatek(0x41);  /*op code*/
+	write_megatek(most_seg);
+	write_megatek(least_seg);
+
+	mono_string(press_enter,win_y_low + 6,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+
+
+
+
+void far read_many_addr() /*26*/
+{
+unsigned int address,most_sig_data,least_sig_data,start_address,end_address;
+unsigned char address1,address2,address3,most1,most2,most3,
+		least1,least2,least3,a_char;
+
+
+	clear_win(0x70);
+
+	mono_string("Read Many Addresses",win_y_low + 1,win_x_low + 1,0x70);
+	mono_string("Enter Starting Address To Read From: ",
+		win_y_low + 3,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	start_address = my_atou(misc_string);
+
+
+	mono_string("Enter Number Of Words To Read: ",win_y_low + 5,
+		win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 6,win_x_low + 4,0x70);
+
+
+	end_address = my_atou(misc_string);
+
+	if(FP_SEG(mono_ptr) == 0xb800)
+	{
+		make_win(0,0,79,24);
+		clear_win(15);
+	}
+
+
+	printf("\n\n");
+	printf("Read Many Addresses:\nStart Addr. = %u , # Words = %u\n\n",
+		start_address,end_address);
+
+	fprintf(out_ptr,"Read Many Addresses:\nStart Addr. = %u , # Words = %u\n\n",
+		start_address,end_address);
+
+	end_address += start_address;
+
+	for(address = start_address ; address <= end_address ; address++)
+	{
+		printf("Address = %u \n ",address);
+		fprintf(out_ptr,"Address = %u \n",address);
+
+		address1 = address >> 12;
+		address2 = (address >> 6) & 0x3f;
+		address3 = address & 0x3f;
+
+		write_megatek(0x6f);	/*op code*/
+
+		write_megatek(address1);
+		write_megatek(address2);
+		write_megatek(address3);
+
+		a_char = read_megatek(); /*GS*/
+
+		most1 = read_megatek();
+		most2 = read_megatek();
+		most3 = read_megatek();
+
+		most_sig_data = comp16_3(most1,most2,most3);
+
+		least1 = read_megatek();
+		least2 = read_megatek();
+		least3 = read_megatek();
+
+		a_char = read_megatek(); /*0x0d*/
+
+		least_sig_data = comp16_3(least1,least2,least3);
+
+
+		printf("    MSD = %6u = ",most_sig_data);
+		display_binary(most_sig_data);
+
+		printf("    LSD = %6u = ",least_sig_data);
+		display_binary(least_sig_data);
+
+
+		if((most_sig_data & 0xff00) == 0xfc00) /*its a jump*/
+		{
+			printf("Its A Jump/Absolute/Relative\n");
+			fprintf(out_ptr,"Its A Jump/Absolute/Relative\n");
+		}
+
+		fprintf(out_ptr,"    MSD = %6u = ",most_sig_data);
+		print_binary(most_sig_data);
+
+		fprintf(out_ptr,"    LSD = %6u = ",least_sig_data);
+		print_binary(least_sig_data);
+
+	}
+
+	printf("\n\nEnd Of Read Many Addresses\n");
+	fprintf(out_ptr,"\n\nEnd Of Read Many Addresses\n");
+
+	printf("\n%s\n\n",press_enter);
+	getch();
+
+
+	if(FP_SEG(mono_ptr) == 0xb800)
+	{
+		clear_win(15);
+		make_win(10,3,70,20);
+	}
+
+}
+
+
+
+void far clear_sub()
+{
+unsigned int sub_num;
+unsigned char most_sub,least_sub;
+
+
+	clear_win(0x70);
+	mono_string("Clear Subroutine",win_y_low + 1,win_x_low + 1,0x70);
+	mono_string("Enter Subroutine's #: ",win_y_low + 3,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	sub_num = my_atou(misc_string);
+
+	fprintf(out_ptr,"Clear Subroutine # %d\n",sub_num);
+
+	most_sub = (sub_num >> 6) & 0x3f;
+	least_sub = sub_num & 0x3f;
+
+	write_megatek(0x62); /*op code*/
+	write_megatek(most_sub);
+	write_megatek(least_sub);
+
+	mono_string(press_enter,win_y_low + 6,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+void far append_sub()
+{
+unsigned int sub_num;
+unsigned char most_sub,least_sub;
+
+	clear_win(0x70);
+	mono_string("Append Subroutine",win_y_low + 1,win_x_low + 1,0x70);
+	mono_string("Enter Subroutine's #: ",win_y_low + 3,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	sub_num = my_atou(misc_string);
+
+	fprintf(out_ptr,"Append Subroutine # %d\n",sub_num);
+
+	most_sub = (sub_num >> 6) & 0x3f;
+	least_sub = sub_num & 0x3f;
+
+	write_megatek(0x61); /*op code*/
+	write_megatek(most_sub);
+	write_megatek(least_sub);
+
+	mono_string(press_enter,win_y_low + 6,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+void far delete_sub()
+{
+unsigned int sub_num;
+unsigned char most_sub,least_sub;
+
+	clear_win(0x70);
+	mono_string("Delete Subroutine",win_y_low + 1,win_x_low + 1,0x70);
+	mono_string("Enter Subroutine's #: ",win_y_low + 3,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	sub_num = my_atou(misc_string);
+
+	fprintf(out_ptr,"Delete Subroutine # %d\n",sub_num);
+
+	most_sub = (sub_num >> 6) & 0x3f;
+	least_sub = sub_num & 0x3f;
+
+	write_megatek(0x63); /*op code*/
+	write_megatek(most_sub);
+	write_megatek(least_sub);
+
+	mono_string(press_enter,win_y_low + 6,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+void far delete_seg()
+{
+unsigned int seg_num;
+unsigned char most_seg,least_seg;
+
+
+	clear_win(0x70);
+	mono_string("Delete Segment",win_y_low + 1,win_x_low + 1,0x70);
+	mono_string("Enter Segment's #: ",win_y_low + 3,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	seg_num = my_atou(misc_string);
+
+	fprintf(out_ptr,"Delete Segment # %d\n",seg_num);
+
+	most_seg = (seg_num >> 6) & 0x3f;
+	least_seg = seg_num & 0x3f;
+
+	write_megatek(0x43); /*op code*/
+	write_megatek(most_seg);
+	write_megatek(least_seg);
+
+	mono_string(press_enter,win_y_low + 6,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+
+void far jump_ext()
+{
+unsigned int most_sig,least_sig;
+long address;
+int ch,newline;
+
+	clear_win(0x70);
+        mono_string("Compute Address Of An Extended Jump",win_y_low + 1,
+		win_x_low + 1,0x70);
+	mono_string("Is it an absolute jump (y/n)? ",win_y_low + 3,
+		win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	ch = misc_string[0];
+
+
+/*
+	printf("Enter (Most Sig. Data  Least Sig. Data): ");
+	scanf("%u%u",&most_sig,&least_sig);
+*/
+
+	mono_string("Enter Most Significant Half Of Address",
+		win_y_low + 5,win_x_low + 4,0x70);
+	read_mono_string(misc_string,win_y_low + 6,win_x_low + 6,0x70);
+	most_sig = my_atou(misc_string);
+
+	mono_string("Enter Least Significant Half Of Address",
+		win_y_low + 7,win_x_low + 4,0x70);
+	read_mono_string(misc_string,win_y_low + 8,win_x_low + 6,0x70);
+	least_sig = my_atou(misc_string);
+
+
+	fprintf(out_ptr,"Compute Addr. Ext. Jump: MSD = %u , LSD = %u\n",
+		most_sig,least_sig);
+
+	if((ch == 'y') || (ch == 'Y'))
+		address = (((long)most_sig << 16) | (long)least_sig) &
+			0x000fffff;
+	else
+	{
+		address = (((long)most_sig << 16) | (long)least_sig) &
+			0x000fffff;
+		if((address & 0x00080000) != 0) /*its a negative displacement*/
+		{
+			address = ((~address) & 0x000fffff) + 1;
+			address = -address;
+		}
+	}
+
+	if(ch == 'y')
+	{
+		sprintf(misc_string,"Address = %ld",address);
+		mono_string(misc_string,win_y_low + 10,win_x_low + 5,0x70);
+		fprintf(out_ptr,"Address = %ld\n",address);
+	}
+	else
+	{
+		sprintf(misc_string,"Displacement = %ld",address);
+		mono_string(misc_string,win_y_low + 10,win_x_low + 5,0x70);
+		fprintf(out_ptr,"Displacement = %ld\n",address);
+	}
+
+
+	mono_string(press_enter,
+		win_y_low + 11,win_x_low + 8,0x70);
+	getch();
+}
+
+
+
+void far read_old_start()
+{
+unsigned char most_num,least_num,first,second,third,ch;
+unsigned int seg_num,address;
+
+	clear_win(0x70);
+	mono_string("NON-EDLM Read Segment Start Address",win_y_low + 1,
+		win_x_low + 1,0x70);
+	mono_string("Enter Segment Number: ",win_y_low + 3,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	fprintf(out_ptr,"Old Read Segment Start Address\n");
+
+	seg_num = my_atou(misc_string);
+
+	fprintf(out_ptr,"Segment # = %d\n",seg_num);
+
+	most_num = (seg_num >> 6) & 0x3f;
+	least_num = seg_num & 0x3f;
+
+	
+	write_megatek('{');  /*op code*/
+	write_megatek(most_num);
+	write_megatek(least_num);
+
+	ch = read_megatek();  /*GS*/
+	first = read_megatek();
+	second = read_megatek();
+	third = read_megatek();
+	ch = read_megatek();  /*0x0d*/
+
+	address = comp16_3(first,second,third);
+	sprintf(misc_string,"Start Address = %u",address);
+	mono_string(misc_string,win_y_low + 6,win_x_low + 4,0x70);
+	fprintf(out_ptr,"Start Address = %u\n",address);
+
+	mono_string(press_enter,win_y_low + 8,win_x_low + 3,0x70);
+	getch();
+}
+
+
+
+void far read_new_start()
+{
+unsigned char most_num,least_num,first,second,third,fourth,ch;
+unsigned int seg_num;
+long address;
+
+	clear_win(0x70);
+	mono_string("EDLM Read Segment Start Address",
+		win_y_low + 1,win_x_low + 1,0x70);
+	mono_string("Enter Segment Number: ",win_y_low + 3,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 4,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	seg_num = my_atou(misc_string);
+
+	fprintf(out_ptr,"EDLM Read Segment Start Address\n");
+	fprintf(out_ptr,"Segment # = %d\n",seg_num);
+
+	most_num = (seg_num >> 6) & 0x3f;
+	least_num = seg_num & 0x3f;
+
+	
+	write_megatek('Z');  /*op code*/
+	write_megatek(most_num);
+	write_megatek(least_num);
+
+	ch = read_megatek();  /*GS*/
+	first = read_megatek();
+	second = read_megatek();
+	third = read_megatek();
+	fourth = read_megatek();
+	ch = read_megatek();  /*0x0d*/
+
+	address = (long)(first & 0x03);
+	address <<= 6;
+	address |= (long)(second & 0x3f);
+	address <<= 6;
+	address |= (long)(third & 0x3f);
+	address <<= 6;
+	address |= (long)(fourth & 0x3f);
+
+	sprintf(misc_string,"Start Address = %ld",address);
+	mono_string(misc_string,win_y_low + 6,win_x_low + 3,0x70);
+	fprintf(out_ptr,"Start Address = %ld\n",address);
+
+
+	mono_string(press_enter,win_y_low + 8,win_x_low + 5,0x70);
+	getch();
+}
+
+
+
+char far *mem_menu_text[8] =
+{
+	"NON-EDLM Read Position ID",
+	"EDLM Read Position ID",
+	"NON-EDLM Read Segment Start Address",
+	"EDLM Read Segment Start Address",
+	"Read Specified Address",
+	"Read Many Addresses",
+	"Write At Insert Pointer",
+	"Write Specified Address"
+};
+
+
+
+
+void far mem_menu()
+{
+int selection = 0;
+
+	
+	while(88)
+	{
+		selection = choose_menu("Memory Commands",mem_menu_text,8,0);
+
+		switch(selection)
+		{
+			case 1 :
+			{
+				old_read_pos_id();
+				break;
+			}
+
+
+			case 2 :
+			{
+				new_read_pos_id();
+				break;
+			}
+
+
+			case 3 : /*old read segment start address*/
+			{
+				read_old_start();
+				break;
+			}
+
+			case 4 : /*EDLM read segment start address*/
+			{
+				read_new_start();
+				break;
+			}
+
+
+			case 5 :
+			{
+				read_spec_addr();
+				break;
+			}
+
+
+			case 6 : 
+			{
+				read_many_addr();
+				break;
+			}
+
+
+			case 7 :
+			{
+				write_insert();
+				break;
+			}
+
+			case 8 :
+			{
+				write_spec_addr();
+				break;
+			}
+
+
+			case TERMINATE :
+			case REJECT :
+			case ENTRY_COMPLETE:
+				return;
+		}
+
+	}
+
+}
+
+
+
+char far *segment_text[5] =
+{
+	"Open Segment",
+	"Close Segment",
+	"Append Segment",
+	"Clear Segment",
+	"Delete Segment"
+};
+
+
+
+
+void far seg_menu()
+{
+int selection = 0;
+
+	while(99)
+	{
+		selection = choose_menu("Segment Operations ",segment_text,
+			5,0);
+
+		switch(selection)
+		{
+			case 1 :
+			{
+				open_seg();
+				break;
+			}
+
+			case 2 :
+			{
+				close_seg();
+				break;
+			}
+
+			case 3 : /*append segment*/
+			{
+				append_seg();
+				break;
+			}
+
+
+			case 4 : /*clear segment*/
+			{
+				clear_seg();
+				break;
+			}
+
+
+
+			case 5 : /*delete seg*/
+			{
+				delete_seg();
+				break;
+			}
+
+
+			case ENTRY_COMPLETE :
+			case TERMINATE :
+			case REJECT :
+				return;
+		}
+	}
+}
+
+
+
+
+char far *subroutine_text[5] =
+{
+	"Open Subroutine",
+	"Close Subroutine",
+	"Append Subroutine",
+	"Clear Subroutine",
+	"Delete Subroutine"
+};
+
+
+
+void far sub_menu()
+{
+int selection = 0;
+
+	while(99)
+	{
+		selection = choose_menu("Subroutine Operations",
+			subroutine_text,5,0);
+
+
+		switch(selection)
+		{
+			case 1 :
+			{
+				open_sub();
+				break;
+			}
+
+			case 2 :
+			{
+				close_sub();
+				break;
+			}
+
+
+			case 3 :  /*append sub*/
+			{
+				append_sub();
+				break;
+			}
+
+
+
+			case 4 : /*clear sub*/
+			{
+				clear_sub();
+				break;
+			}
+
+
+			case 5 : /*delete sub*/
+			{
+				delete_sub();
+				break;
+			}
+
+
+			case TERMINATE :
+			case ENTRY_COMPLETE :
+			case REJECT :
+				return;
+		}
+	}
+}
+
+
+
+
+#ifdef djdjfjfjfjfjfj
+
+void far mess_mon()
+{
+int selection;
+
+mess_again:
+		printf("\n\nMessage Monitor Menu: Enter Selection\n\n");
+		printf("      0) Enter Message Monitor\n");
+		printf("      1) Exit Message Monitor\n\n");
+		printf("      ? : ");
+
+		scanf("%d",&selection);
+		printf("\n");
+
+		switch(selection)
+		{
+			case 0 : /*Enter Message Monitor*/
+			{
+				fprintf(out_ptr,"Enter Message Monitor\n");
+				megatek_out(0x10);
+				megatek_out(0x0d);
+				break;
+			}		
+
+
+			case 1 : /*Exit Message Monitor*/
+			{
+				fprintf(out_ptr,"Exit Message Monitor\n");
+				megatek_out(0x1b);
+				megatek_out('1');
+				break;
+			}
+
+			default :
+			{
+			 	printf("Invalid Selection\n");
+				goto mess_again;
+			}
+		}
+}
+#endif
+
+
+#ifdef jfjfvjvjvjvj
+
+void far text_graphics()
+{
+int selection;
+
+text_again:
+		printf("\n\nText/Graphics Mode Menu: Enter Selection\n\n");
+		printf("      0) Enter Graphics Mode\n");
+		printf("      1) Exit Graphics Mode\n\n");
+		printf("      ? : ");
+
+		scanf("%d",&selection);
+		printf("\n");
+
+		switch(selection)
+		{
+			case 0 : /*enter graphics mode*/
+			{
+				fprintf(out_ptr,"Enter Graphics Mode\n");
+				megatek_out(0x1d);
+				break;
+			}
+
+			case 1 : /*exit graphics mode*/
+			{
+				fprintf(out_ptr,"Exit Graphics Mode\n");
+				megatek_out(0x1f);
+				break;
+			}
+
+			default :
+			{ 
+				printf("Invalid Selection\n");
+				goto text_again;
+			}
+		}
+}
+#endif
+
+
+
+
+char far *com_menu_text[2] =
+{
+	"                                                    ",
+	"     \0"
+};
+
+
+
+void far com_menu()
+{
+int selection;
+
+	while(99)
+	{
+		if(com_ptr == NULL)
+		{
+			sprintf(com_menu_text[0],"Open New Com File");
+		}
+		else
+		{
+			sprintf(com_menu_text[0],"Close The Com File");
+		}
+
+
+		clear_win(0x70);
+		selection = choose_menu("Communications Log File",
+			com_menu_text,1,1);
+
+
+		if((selection == 1) || (selection == ENTRY_COMPLETE))
+		{
+			if(com_ptr == NULL) /*open com file & write to it*/
+			{
+				mono_string("Enter The Com File's Name: ",
+					win_y_low + 5,win_x_low + 4,0x70);
+				read_mono_string(a_file,
+					win_y_low + 6,win_x_low + 5,0x70);
+
+				if(a_file[0] == '\0')
+					return;
+
+
+				com_ptr = fopen(a_file,"w");
+
+				if(com_ptr == NULL)
+				{
+					putchar(7);
+					mono_string("INVALID FILE NAME",
+						win_y_low + 8,
+						win_x_low + 10,0x70);
+				}
+				else
+				{
+					sprintf(misc_string,
+						"Write Down The Com File's Name = %s",
+						a_file);
+					mono_string(misc_string,win_y_low + 8,
+						win_x_low + 4,0x70);
+
+					fprintf(out_ptr,"Open Com File: %s\n",
+						a_file);
+				}
+			}
+			else  /* close the open file */
+			{
+				sprintf(misc_string,
+					"Closing Com File: %s",a_file);
+				mono_string(misc_string,win_y_low + 5,
+					win_x_low + 3,0x70);
+
+				fprintf(out_ptr,"Closing Com File: %s\n",
+					a_file);
+				fclose(com_ptr);
+				com_ptr = NULL;
+			}
+
+
+			mono_string(press_enter,win_y_low + 10,
+				win_x_low + 5,0x70);
+			getch();
+
+		}   /* end if do the action */
+
+
+		if((selection == TERMINATE) || (selection == REJECT))
+			break;
+	}
+
+}
+
+
+
+
+
+char far *baud_rate_text[5] = 
+{
+	"1200",
+	"2400",
+	"4800",
+	"9600",
+	"19200"
+};
+
+
+
+
+void far enter_baud_rate()
+{
+int selection;
+
+	while(99)
+	{
+		selection = choose_menu("Select Baud Rate",baud_rate_text,5,
+			last_baud_rate);
+		switch(selection)
+		{
+			case 1 :  /* 1200 */
+			{
+				open_host(96);
+				open_megatek(96);
+				last_baud_rate = 1;
+
+				break;
+			}
+
+			case 2 :  /* 2400 */
+			{
+				open_host(48);
+				open_megatek(48);
+				last_baud_rate = 2;
+
+				break;
+			}
+
+			case 3 :  /* 4800 */
+			{
+				open_host(24);
+				open_megatek(24);
+				last_baud_rate = 3;
+
+				break;
+			}
+
+			case 4 :  /* 9600 */
+			{
+				open_host(12);
+				open_megatek(12);
+				last_baud_rate = 4;
+
+				break;
+			}
+
+			case 5 :  /* 19200 */
+			{
+				open_host(6);
+				open_megatek(6);
+				last_baud_rate = 5;
+
+				break;
+			}
+
+
+			case TERMINATE :
+			case ENTRY_COMPLETE :
+			case REJECT :
+				return;
+		}
+
+	}
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+char far *toggles_text[3] =
+{
+	"Message Monitor           \0                       ",
+	"Text/Graphics Mode       \0                        ",
+	"Show  Host & Megatek Data  \0                      "
+};
+
+
+
+
+
+void far my_toggles()
+{
+int selection;
+
+the_top:
+
+
+	if(message_monitor == INSIDE)
+	{
+		sprintf(toggles_text[0],
+			"Message Monitor            :  Inside");
+	}
+	else
+	{
+		sprintf(toggles_text[0],
+			"Message Monitor            :  Outside");
+	}
+
+
+	if(text_graphics == GRAPHICS)
+	{
+		sprintf(toggles_text[1],
+			"Text/Graphics Mode         :  Graphics");
+	}
+	else
+	{
+		sprintf(toggles_text[1],
+			"Text/Graphics Mode         :  Text");
+	}
+
+
+	if(show_flag == 't')
+	{
+		sprintf(toggles_text[2],
+			"Show  Host & Megatek Data  :  Enabled");
+	}
+	else
+	{
+		sprintf(toggles_text[2],
+			"Show  Host & Megatek Data  :  Disabled");
+	}
+
+
+
+
+	selection = choose_menu("TOGGLES: Enter Selection",toggles_text,
+		3,0);
+
+
+	switch(selection)
+	{
+		case 1 : /*message monitor*/
+		{
+			if(message_monitor == OUTSIDE)
+			{
+				fprintf(out_ptr,"Enter Message Monitor\n");
+				megatek_out(0x10);
+				megatek_out(0x0d);
+				message_monitor = INSIDE;
+			}		
+			else
+			{
+				fprintf(out_ptr,"Exit Message Monitor\n");
+				megatek_out(0x1b);
+				megatek_out('1');
+				message_monitor = OUTSIDE;
+			}
+
+
+			break;
+		}
+
+
+		case 2 : /*text/graphics*/
+		{
+			if(text_graphics == TEXT)
+			{
+				fprintf(out_ptr,"Enter Graphics Mode\n");
+				megatek_out(0x1d);
+				text_graphics = GRAPHICS;
+			}
+			else
+			{
+				fprintf(out_ptr,"Exit Graphics Mode\n");
+				megatek_out(0x1f);
+				text_graphics = TEXT;
+			}
+
+
+			break;
+		}
+
+
+		case 3 : /*show/no show data*/
+		{
+			if(show_flag == 't')
+			{
+				fprintf(out_ptr,
+				       "Stop Showing Megatek & Host Data\n");
+				show_flag = 'f';
+			}
+			else
+			{
+				fprintf(out_ptr,
+				       "Start Showing Megatek & Host Data\n");
+				show_flag = 't';
+			}
+
+
+			break;
+		}
+
+
+		case REJECT :
+		case ENTRY_COMPLETE :
+		case TERMINATE :
+			return;
+
+	}
+
+	goto the_top;
+}
+
+
+
+
+char far *misc_text[6] =
+{
+	"Send Escape Followed By a Charactor",
+	"Send Keyboard Data To The Megatek",
+	"Compute Ext. Jump Address/Offset",
+	"Convert Negative Unsigned Integer To Signed Integer",
+	"Send Commands To DOS",
+	"Show Current Log File"
+};
+
+
+
+
+
+
+void far my_misc()
+{
+int selection;
+int i;
+
+the_top:
+
+	selection = choose_menu("MISC: Enter Selection",misc_text,6,0);
+
+	switch(selection)
+	{
+		case 1 : /*send esc followed by a char to megatek*/
+		{
+			clear_win(0x70);
+			mono_string("Enter Char That Follows Escape: ",
+				win_y_low + 1,win_x_low + 5,0x70);
+			ch = getch();
+			output_a_char(ch,win_y_low + 3,win_x_low + 5,0x70);
+			mono_string(press_enter,win_y_low + 5,
+				win_x_low + 4,0x70);
+			getch();
+
+			megatek_out(0x1b);
+			megatek_out(ch);
+
+			break;
+		}
+
+		case 2 : /*send keyboard input to megatek*/
+		{
+			clear_win(0x70);
+			mono_string("Type & It Will Go To The Megatek",
+				win_y_low + 1,win_x_low + 3,0x70);
+			mono_string("Type a tilde (~) to stop",
+				win_y_low + 2,win_x_low + 3,0x70);
+
+			ch = ' ';
+			i = 0;
+
+			while(ch != '~')
+			{
+				ch = getch();
+				output_a_char(ch,win_y_low + 4,
+					win_x_low + 3 + i,0x70);
+				megatek_out(ch);
+				i++;
+			}
+
+			break;
+		}
+
+
+		case 3 : /*compute extended jump address*/
+		{
+			jump_ext();
+			break;
+		}
+
+
+		case 4 : /*convert negative unsigned to signed integer*/
+		{
+			clear_win(0x70);
+			mono_string("Enter Unsigned Negative Integer: ",
+				win_y_low + 1,win_x_low + 3,0x70);
+			read_mono_string(misc_string,win_y_low + 3,
+				win_x_low + 4,0x70);
+			k = my_atou(misc_string);
+			sprintf(misc_string,"Signed Version = %d",k);
+			mono_string(misc_string,win_y_low + 5,
+				win_x_low + 5,0x70);
+			mono_string(press_enter,win_y_low + 7,
+				win_x_low + 3,0x70);
+
+			getch();
+
+			break;
+		}
+
+
+		case 5 :  /* send commands to DOS */
+		{	
+			if(FP_SEG(mono_ptr) == 0xb800)
+			{
+				make_win(0,0,79,24);
+				clear_win(15);
+			}
+
+			printf("\n\nType DOS Commands  (EXIT  To Stop)\n\n");
+
+			for(gets(system_string) ;
+			    strncmp(strupr(system_string),"EXIT",4) != 0 ;
+			    gets(system_string))
+			{
+				system(system_string);
+				printf("\n\nType Next DOS Command\n\n");
+			}
+
+
+			if(FP_SEG(mono_ptr) == 0xb800)
+			{
+				clear_win(15);
+				make_win(10,3,70,20);
+			}
+
+			break;
+		}
+
+
+		case 6 :
+		{
+			show_log_file();
+			break;
+		}
+
+
+		case REJECT :
+		case ENTRY_COMPLETE :
+		case TERMINATE :
+			return;
+	}
+
+	goto the_top;
+}
+
+
+
+
+int far my_x,far my_y;
+
+
+void far move_2d_abs()
+{
+	clear_win(0x70);
+	mono_string("Move 2D ABS",win_y_low + 1,win_x_low + 1,0x70);
+	mono_string("Enter X Coord",win_y_low + 3,win_x_low + 5,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 5,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	my_x = atoi(misc_string);
+
+	mono_string("Enter Y Coord",win_y_low + 5,win_x_low + 5,0x70);
+	read_mono_string(misc_string,win_y_low + 6,win_x_low + 5,0x70);
+
+	my_y = atoi(misc_string);
+
+
+	fprintf(out_ptr,"Move 2D ABS  (%d,%d)\n",my_x,my_y);
+
+
+	write_megatek('P');
+
+	write_megatek((my_x >> 6) & 0x3f);  /* X     */
+	write_megatek(my_x & 0x3f);         /* Coord */
+
+	write_megatek((my_y >> 6) & 0x3f);  /* Y     */
+	write_megatek(my_y & 0x3f);  /* Coord */
+}
+
+
+
+
+void far draw_2d_abs()
+{
+	clear_win(0x70);
+	mono_string("Draw 2D ABS",win_y_low + 1,win_x_low + 1,0x70);
+	mono_string("Enter X Coord",win_y_low + 3,win_x_low + 5,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 5,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	my_x = atoi(misc_string);
+
+	mono_string("Enter Y Coord",win_y_low + 5,win_x_low + 5,0x70);
+	read_mono_string(misc_string,win_y_low + 6,win_x_low + 5,0x70);
+
+	my_y = atoi(misc_string);
+
+
+	fprintf(out_ptr,"Draw 2D ABS  (%d,%d)\n",my_x,my_y);
+
+
+
+	write_megatek('Q');
+
+	write_megatek(0);  /* X     */
+	write_megatek(45);  /* Coord */
+
+	write_megatek(0);  /* Y     */
+	write_megatek(39);  /* Coord */
+}
+
+
+
+
+
+void far character_string()
+{
+int i;
+
+	clear_win(0x70);
+	mono_string("Character String (VIEW NAMES)",win_y_low + 1,
+		win_x_low + 1,0x70);
+
+	mono_string("Enter X Coord",win_y_low + 3,win_x_low + 5,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 5,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	my_x = atoi(misc_string);
+
+	mono_string("Enter Y Coord",win_y_low + 5,win_x_low + 5,0x70);
+	read_mono_string(misc_string,win_y_low + 6,win_x_low + 5,0x70);
+
+	my_y = atoi(misc_string);
+
+
+	fprintf(out_ptr,
+	   "Character String (VIEW NAMES)  @ MOVE 2D ABS (%d,%d)\n",
+		my_x,my_y);
+
+
+/* MOVE 2D ABS */
+	write_megatek('P');
+
+	write_megatek((my_x >> 6) & 0x3f);  /* X     */
+	write_megatek(my_x & 0x3f);         /* Coord */
+
+	write_megatek((my_y >> 6) & 0x3f);  /* Y     */
+	write_megatek(my_y & 0x3f);  /* Coord */
+
+
+
+	mono_string("Enter Character String Command Text",
+		win_y_low + 8,win_x_low + 2,0x70);
+	read_mono_string(misc_string,win_y_low + 9,win_x_low + 3,0x70);
+
+	fprintf(out_ptr,"Character TEXT = %s\n\n",misc_string);
+
+
+
+/* Character string TEXT */
+	write_megatek('X');
+	write_megatek(2);  /* size */
+	write_megatek(0);  /* rotate 0 degrees */
+
+	for(i = 0 ; misc_string[i] != '\0' ; i++)
+		write_megatek(misc_string[i]);
+
+	megatek_out(0x1d);
+
+}
+
+
+
+
+int far rewrite_segment;
+long far id;
+int far displacement;
+
+void far segment_rewrite()
+{
+	clear_win(0x70);
+
+	mono_string("EDLM Segment Rewrite",win_y_low + 1,win_x_low + 1,0x70);
+	mono_string("Enter Segment Number",win_y_low + 3,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 4,win_x_low + 5,0x70);
+
+	if(misc_string[0] == '\0')
+		return;
+
+	rewrite_segment = atoi(misc_string);
+
+	mono_string("Enter ID",win_y_low + 5,win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 6,win_x_low + 5,0x70);
+
+
+	id = atol(misc_string);
+
+	mono_string("Enter Displacement",win_y_low + 7, win_x_low + 3,0x70);
+	read_mono_string(misc_string,win_y_low + 8,win_x_low + 5,0x70);
+
+	displacement = atoi(misc_string);
+
+
+	fprintf(out_ptr,
+	   "Rewrite Segment (EDLM) : Segm = %d  id = %ld  displ = %d\n",
+		rewrite_segment,id,displacement);
+
+
+	write_megatek('\\');   /* EDLM Rewrite */
+
+	write_megatek((rewrite_segment >> 6) & 0x3f);
+	write_megatek(rewrite_segment & 0x3f);
+
+	write_megatek((int)((id >> 18) & 0x03L));
+	write_megatek((int)((id >> 12) & 0x3fL));
+	write_megatek((int)((id >> 6) & 0x3fL));
+	write_megatek((int)(id & 0x3fL));
+
+	write_megatek((displacement >> 6) & 0x3f);
+	write_megatek(displacement & 0x3f);
+}
+
+
+
+
+
+
+char far *drawing_command_text[5] =
+{
+	"Move 2D ABS",
+	"Draw 2D ABS",
+	"Short Relatives : A Circle",
+	"Character String",
+	"Segment Rewrite"
+};
+
+
+
+
+void far drawing_commands()
+{
+int selection;
+
+	while(99)
+	{
+
+		selection = choose_menu("Drawing Commands",
+			drawing_command_text,5,0);
+
+		switch(selection)
+		{
+			case 1 : 
+			{
+				move_2d_abs();
+				break;
+			}
+
+			case 2 : 
+			{
+				draw_2d_abs();
+				break;
+			}
+
+			case 3 :
+			{
+				short_rel();
+				break;
+			}
+
+			case 4 : 
+			{
+				character_string();
+				break;
+			}
+
+			case 5 :
+			{
+				segment_rewrite();
+				break;
+			}
+
+
+			case REJECT :
+			case ENTRY_COMPLETE :
+			case TERMINATE :
+				return;
+		}
+	}
+}
+
+
+
+
+
+
+
+char far *main_menu_text[10] =
+{
+	"Memory Operations (Read Pos. ID,  Read/Write Mem.)",
+	"Segment Operations",
+	"Subroutine Operations",
+	"Set Baud Rate",
+	"System Resets",
+	"Com File Open/Close",
+	"S R V's, Move, Draw, Text String, Segment Rewrite",
+	"Toggles (Megatek Modes, Show/No Show Data)",
+	"Misc.",
+	"EXIT TO DOS"
+};
+
+
+
+
+
+
+main()
+{
+int selection = 0;
+int i,k;
+
+
+	FP_SEG(mono_ptr) = 0xb800;
+	FP_OFF(mono_ptr) = 0;
+
+
+	printf("\n\nEnter File Name For Your Menu Command Output : ");
+	scanf("%s",a_file);
+
+	out_ptr = fopen(a_file,"w+");
+
+	baud_rate = 12;
+
+	printf("\n\nTHE BAUD RATE is  9600\n\n");
+
+
+	open_host(12);
+	open_host(12);
+	open_megatek(12);
+	open_megatek(12);
+
+
+	while(44)
+	{
+		selection = choose_menu("Select Option",main_menu_text,10,0);
+
+		switch(selection)
+		{
+			case 1 : /*memory operation*/
+			{
+				mem_menu();
+				break;
+			}
+
+
+			case 2 : /*segment menu*/
+			{
+				seg_menu();
+				break;
+			}
+
+
+			case 3 : /*subroutine menu*/
+			{
+				sub_menu();
+				break;
+			}
+
+
+			case 4 : /*Enter baud rate*/
+			{
+				enter_baud_rate();
+				break;
+			}
+
+
+			case 5 : /*system resets*/
+			{
+				resets();
+				break;
+			}
+
+
+			case 6 : /*com files*/
+			{
+				com_menu();
+				break;
+			}
+
+			case 7 : /* drawing commands */
+			{
+				drawing_commands();
+				break;
+			}
+
+			case 8 :  /* Toggles */
+			{
+				my_toggles();
+				break;
+			}
+
+			case 9 :  /* MISC */
+			{
+				my_misc();
+				break;
+			}
+
+
+			case 10 : goto my_end;
+		}
+
+	}
+
+
+
+my_end:
+	fclose(out_ptr);
+
+	if(com_ptr != NULL)
+		fclose(com_ptr);
+}
+
+

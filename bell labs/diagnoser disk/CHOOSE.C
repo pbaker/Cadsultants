@@ -1,0 +1,315 @@
+#include "stdio.h"
+#include "dos.h"
+
+
+
+#define TERMINATE  -1
+#define ENTRY_COMPLETE  -2
+#define REJECT  -3
+
+
+
+extern void far communicate(void);
+extern int far keyboard_status();
+extern char far *mono_ptr;
+
+
+
+union REGS far my_input_regs, far my_output_regs;
+
+int far char_type,far char_value;
+
+
+char far sprintf_string[222];
+int far win_y_low,far win_x_low,far win_y_up,far win_x_up;
+
+
+char far controls[3][50] =
+{
+	{26,' ','E','n','t','r','y',' ','C','o','m','p','l','e','t','e','\0'},
+	{27,' ','R','e','j','e','c','t',' ',' ',' ',' ',' ',' ',' ',' ','\0'},
+	{25,' ','T','e','r','m','i','n','a','t','e',' ',' ',' ',' ',' ','\0'}
+};
+
+
+
+
+
+
+
+
+void far read_keyboard(type_char_read,value_char_read)
+int far *type_char_read, far *value_char_read;
+{
+	while(keyboard_status() == -1)
+	{
+		communicate();
+	}
+
+
+	
+	my_input_regs.h.ah = 0;
+
+	int86(0x16,&my_input_regs,&my_output_regs);
+
+	(*type_char_read) = my_output_regs.h.al;
+	(*value_char_read) = my_output_regs.h.ah;
+}
+
+
+
+
+
+void far draw_box()
+{
+
+}
+
+
+
+void far make_win(x1,y1,x2,y2)
+int x1,y1,x2,y2;
+{
+	win_x_low = x1;
+	win_y_low = y1;
+	win_x_up = x2;
+	win_y_up = y2;
+}
+
+
+
+void far clear_win(the_attribute)
+int the_attribute;
+{
+int row,col;
+
+	for(row = win_y_low ; row < win_y_up ; row++)
+	{
+		for(col = win_x_low ; col < win_x_up ; col++)
+		{
+			*(mono_ptr + row*160 + (col << 1)) = ' ';
+			*(mono_ptr + row*160 + (col << 1) + 1) = the_attribute;
+		}
+	}
+
+}
+
+
+
+
+void far mono_string(the_string,row,col,the_attribute)
+char far the_string[];
+int row,col,the_attribute;
+{
+int i;
+
+	for(i = 0 ; the_string[i] != '\0' ; i++)
+	{
+		*(mono_ptr + row*160 + ((col + i) << 1)) = the_string[i];
+		*(mono_ptr + row*160 + ((col + i) << 1) + 1) = the_attribute;
+	}
+
+}
+
+
+
+
+
+void far control_window()
+{
+int i;
+
+	make_win(55,18,74,22);
+	clear_win(0x70);
+	draw_box();
+
+	
+	for(i = 0 ; i < 3 ; i++)
+		mono_string(controls[i],win_y_low + 1 + i,win_x_low + 2,0x70);
+
+
+	make_win(10,3,70,20);
+}
+
+
+
+
+int far choose_menu(header_text,text_options,num_options,the_default)
+char far *header_text;
+char far *text_options[];
+int num_options,the_default;
+{
+int i,ch;
+
+
+	while(2345)
+	{
+		make_win(10,3,70,20);
+		clear_win(0x70);
+		draw_box();
+
+		mono_string(header_text,win_y_low + 1,win_x_low + 1,0x70);
+
+		for(i = 0 ; i < num_options ; i++)
+		{
+			if(*(text_options[i]) != '\0')
+			{
+				if(i + 1 < 10)
+				{
+					sprintf(sprintf_string,
+						"    F%d %s",i + 1,
+						text_options[i]);
+					mono_string(sprintf_string,
+						win_y_low + 3 + i,
+						win_x_low + 1,0x70);
+				}
+				else
+				{
+					sprintf(sprintf_string,
+						"   F%d %s",i + 1,
+						text_options[i]);
+					mono_string(sprintf_string,
+						win_y_low + 3 + i,
+						win_x_low + 1,0x70);
+				}
+			}
+		}
+
+		if(the_default > 0)
+		{
+			mono_string(">",win_y_low + 2 + the_default,
+				win_x_low + 7,0x70);
+		}
+
+
+		control_window();
+
+
+		read_keyboard(&char_type,&char_value);
+
+
+		if(char_type != 0)
+			continue;
+
+
+		switch(char_value)
+		{
+			case 75 :
+				return(REJECT);
+
+			case 77 :
+				return(ENTRY_COMPLETE);
+
+			case 80 :
+				return(TERMINATE);
+
+			case 0x77 :  /* ctrl home key */
+				return(0x77);
+
+			case 0x47 :  /* home key */
+				return(0x47);
+
+
+			default :
+			{
+				char_value -= 0x3b;
+
+				if((char_value >= 0) && 
+				    (char_value < num_options))
+					return(char_value + 1);
+			}
+		}
+	}
+}
+
+
+
+
+
+
+
+int far information_menu(header_text,text_array,num_rows,do_read,in_a_loop)
+char far *header_text;
+char far *text_array[];
+int num_rows;
+char do_read,in_a_loop;
+{
+int i,ch;
+
+
+	make_win(10,3,70,20);
+
+	if(in_a_loop == 'f')
+	{
+		clear_win(0x70);
+		draw_box();
+	}
+
+	mono_string(header_text,win_y_low + 1,win_x_low + 1,0x70);
+	
+
+	for(i = 0 ; i < num_rows ; i++)
+	{
+		mono_string(text_array[i],
+			win_y_low + 3 + i,win_x_low + 1,0x70);
+	}
+
+
+	if(in_a_loop == 'f')
+		control_window();
+
+
+	if(do_read == 'f')
+		return;
+
+
+	while(879)
+	{
+
+		read_keyboard(&char_type,&char_value);
+
+		if(char_type != 0)
+			continue;
+
+
+		switch(char_value)
+		{
+			case 75 :
+				return(REJECT);
+
+			case 77 :
+				return(ENTRY_COMPLETE);
+
+			case 80 :
+				return(TERMINATE);
+		}
+	}
+}
+
+
+
+
+void far error_message(window_row,the_text,num_rows)
+int window_row;
+char far *the_text[];
+int num_rows;
+{
+int i;
+
+
+	for(i = 0 ; i < num_rows ; i++)
+	{
+		mono_string(the_text[i],win_y_low + window_row + i,
+			win_x_low + 4,0x70);
+	}
+
+	mono_string("Press Enter To Continue",
+		win_y_low + window_row + i + 1,win_x_low + 4,0x70);
+
+
+
+
+	read_keyboard(&char_type,&char_value);
+}
+
+

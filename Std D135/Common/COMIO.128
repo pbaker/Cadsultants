@@ -1,0 +1,373 @@
+;
+; Serial Communication Routines
+; for use with "C" D100 code
+;
+;  7/28/88 changed return code for read_host_buffer
+;  8/12/88 changed baud rate code to be interactive
+;  8/15/88 changed modem control byte from 9 to 11 (enable RTS)
+;  9/02/88 added i/o stabilization code to read_host_buffer
+;  9/14/88 removed i/o stabilization code due to unstability!
+;  9/21/88 added routines to switch & clear display page (for C)
+; 10/11/88 fixed XON code; wrong character being returned to "C" code
+; 02/09/89 added code to close COM1
+;
+; Equates
+;
+  host_gauge    equ   1000
+  host_gauge2   equ   1500
+  com1_base     equ   03F8h
+  ctrl_Q        equ      17
+  ctrl_S        equ      19
+;
+_TEXT   SEGMENT  BYTE PUBLIC 'CODE'
+_TEXT   ENDS
+
+_DATA   SEGMENT  WORD PUBLIC 'DATA'
+  _spos1        dw 0
+  _epos1        dw 0
+  _count1       dw 0
+  _host_buffer  db 2000 dup (?)
+  _gauge_status db 0
+_DATA   ENDS
+
+CONST   SEGMENT  WORD PUBLIC 'CONST'
+CONST   ENDS
+
+_BSS            SEGMENT  WORD PUBLIC 'BSS'
+_BSS      ENDS
+
+DGROUP  GROUP   CONST,  _BSS,   _DATA
+        ASSUME  CS: _TEXT, DS: DGROUP, SS: DGROUP, ES: DGROUP
+
+;
+  _text segment
+;
+   public _clear_display_page, _switch_display_page
+   public _open_host, _write_host_buffer, _read_host_buffer
+   public _close_host
+   public _ugout
+;
+; --------------------------------------------------------
+; routine to switch menu display page
+; page number is passed as integer argument from C
+;
+  _switch_display_page proc far
+;
+  push bp
+  mov  bp,sp
+  sub  sp,2
+
+  mov  ax,[bp+6]                ; set up for FAR/HUGE!!!! else use bp + 4
+  mov  ah,5
+  int  10h
+
+  mov  sp,bp
+  pop  bp
+
+  ret
+;
+  _switch_display_page   endp
+; --------------------------------------------------------
+; routine to clear current PC display from C
+;
+ _clear_display_page proc far
+
+  push bp
+  mov  bp,sp
+  mov al,0     ; blank entire screen
+  mov bh,15    ; color is white
+  mov ch,0     ; upper left row
+  mov cl,0     ; upper left column
+  mov dh,23    ; lower right row
+  mov dl,79    ; lower right column
+  mov ah,6     ; scroll up function
+  int 10h      ; BIOS call
+  mov  sp,bp
+  pop  bp
+  ret
+
+ _clear_display_page endp
+; --------------------------------------------------------
+; routine to transmit a character out COM1 from C
+; 
+  _ugout proc far
+;
+  push bp
+  mov  bp,sp
+  sub  sp,2
+
+  mov  ax,[bp+6]                ; set up for FAR/HUGE!!!! else use bp + 4
+  push dx
+  push ax
+;
+  mov  dx,com1_base + 5 ; point to line status register for COM1
+;
+ get_stat:
+;
+  in   al,dx         ; get status byte
+  test al,32         ; check for hold register empty
+  jz   get_stat      ; loop until okay to send
+;
+  mov dx,com1_base   ; point to data register
+  pop ax
+  out dx,al          ; output character in al
+;
+  pop  dx
+  mov  sp,bp
+  pop  bp
+
+  ret
+;
+  _ugout   endp
+; --------------------------------------------------------------
+  _close_host  proc far
+
+  push bp
+  mov  bp,sp
+
+  push ax
+  push dx
+
+; clear COM1 port...
+
+  mov dx,03F9h                          ; point to Interrupt Enable register
+  mov al,0h                             ; clear interrupt on Received Data
+  out dx,al                             ; Interrupt now disabled at com1 ACE
+;
+; then, disable 8259 interrupt chip for IRQ4
+;
+  in  al,21h                            ; 8259 mask register
+  and al,11101111b                      ; 0 at bit 4 to enabled
+  or  al,00010000b                      ; 1 at bit 4 to disable
+  out 21h,al                            ; interrupt masked (turned off)
+
+  pop  dx
+  pop  ax
+;
+  mov  sp,bp
+  pop  bp
+;
+ ret
+;
+  _close_host  endp
+; -------------------------------------------------------------------
+; initialize host communication port
+;
+  _open_host proc far
+;
+;
+  push bp
+  mov  bp,sp
+  sub  sp,2
+
+  mov  ax,[bp+6]                ; set up for FAR/HUGE!!!! else use bp + 4
+
+  push ax
+  push dx
+  push ds
+  push ax
+;
+; Set communication parameters
+;
+  mov  dx,03F8h + 3
+  mov  al,80h
+  out  dx,al
+
+  pop  ax
+  mov  dx,03F8h
+  out  dx,al
+
+  mov  al,ah
+  inc  dx
+  out  dx,al
+
+  mov  dx,03F8h + 3
+  mov  al,00000011b
+  out  dx,al
+;
+; set com1 interrupt handler address
+;
+  push cs
+  pop  ds                                        ; DS is segment of interrupt handler
+  mov  dx,offset _write_host_buffer              ; DX is offset
+  mov  al,0Ch                                    ; com1 interrupt is 0C hex
+  mov  ah,25h                                    ; DOS function to set interrupt vector
+  int  21h                                       ; 
+;
+; clear port...
+
+  mov dx,03F9h                          ; point to Interrupt Enable register
+  mov al,0h                             ; clear interrupt on Received Data
+  out dx,al                             ; Interrupt now disabled at com1 ACE
+;
+; then, disable 8259 interrupt chip for IRQ4
+;
+  in  al,21h                            ; 8259 mask register
+  and al,11101111b
+  or  al,00010000b                      ; 1 at bit 4
+  out 21h,al                            ; interrupt masked (turned off)
+;
+; Now, enable com1 ACE
+;
+  mov dx,03F9h                          ; point to Interrupt Enable register
+  mov al,1                              ; set to interrupt on Received Data
+  out dx,al                             ; Interrupt now enabled at com1 ACE
+;
+  mov dx,03FCh                          ; modem control register
+  mov al,11
+  out dx,al
+;
+; enable 8259 interrupt chip for IRQ4
+;
+  in  al,21h                            ; 8259 mask register
+  and al,11101111b                      ; 0 at bit 4
+  out 21h,al                            ; interrupt unmasked 
+;
+  pop  ds
+  pop  dx
+  pop  ax
+;
+  mov  sp,bp
+  pop  bp
+;
+ ret
+;
+  _open_host  endp
+; --------------------------------------------------------------
+ _write_host_buffer proc far
+;
+  push  ax
+  push  bx
+  push  cx
+  push  dx
+  push  ds
+  push  es
+  push  ss
+  push  di
+  push  si
+  push  sp
+  push  bp
+  pushf
+ 
+  mov  ax,dgroup
+  mov  ds,ax
+
+  mov   dx,3fdh  ; line status register
+  in    al,dx    ; get status byte
+  test  al,01h   ; check for character received
+;
+  jz    b1_end   ; if no character, return
+;
+  mov   dx,3f8h  ; received data register
+  in    al,dx    ; get character
+;
+  mov  si,_epos1   
+;
+  mov  _host_buffer[si],al     ; write character to buffer
+;
+  inc  _epos1                  ; increment pointer
+  inc  _count1                 ; increment count
+;
+  mov  ax,_epos1            ; check for buffer near full
+  cmp  ax,host_gauge
+  jne  b1_end
+  mov  al,ctrl_S
+  push ax
+  call _ugout
+  add  sp,2
+  mov  _gauge_status,1      ; status is near full
+;
+ b1_end:
+;
+  mov  al,20h
+  out  20h,al
+
+  popf
+  pop  bp
+  pop  sp
+  pop  si
+  pop  di
+  pop  ss
+  pop  es
+  pop  ds
+  pop  dx
+  pop  cx
+  pop  bx
+  pop  ax
+
+  iret
+;  
+  _write_host_buffer endp
+;
+; ------------------------------------------------------
+;
+  _read_host_buffer  proc far
+;
+  push bp
+  mov  bp,sp
+;
+  push bx
+  push ds
+
+  mov  ax,dgroup
+  mov  ds,ax
+
+  cmp  _count1,0
+  jne  readit
+
+; 7/28/88 change return code to -1 (was 0)
+;
+;  sub  ax,ax
+
+  mov  ax,-1
+  jmp  exit1
+;
+ readit:
+;
+  cli
+  mov  bx,_spos1
+  inc  _spos1
+  dec  _count1
+  mov  al,_host_buffer[bx]
+  sub  ah,ah
+  cmp  _count1,0
+  je   init1
+
+exit1:
+
+  sti
+  pop  ds
+  pop  bx
+
+  mov  sp,bp
+  pop  bp
+  ret
+;
+ init1:
+;
+  mov  _spos1,0
+  mov  _epos1,0
+  cmp  _gauge_status,0
+  je   exit1
+;
+; host was paused; start up host again
+;
+  push ax                                       ; save character
+  sti
+  mov  _gauge_status,0          ; reset buffer gauge
+
+; send XON to host
+
+  mov  al,ctrl_Q
+  push ax
+  call _ugout
+  add  sp,2
+
+  pop  ax                                       ; restore character
+  jmp  exit1
+;
+  _read_host_buffer endp
+
+_text ends
+      end
+

@@ -1,0 +1,15 @@
+Read Pos. ID: Segment # = 0  ID = 0
+Read Spec. Address: Addr. = 23434
+    MSD =      0 = 0000000000000000
+    LSD =      0 = 0000000000000000
+Read Spec. Address: Addr. = 2344
+    MSD =      0 = 0000000000000000
+    LSD =      0 = 0000000000000000
+Read Spec. Address: Addr. = 2323
+    MSD =      0 = 0000000000000000
+    LSD =      0 = 0000000000000000
+Write At Insert Pointer: Most Sig. = 32443 Least Sig. = 444
+    Check Sum = 0
+Write Spec. Addr.: Addr = 4444 Most Sig. = 5543 Least Sig. = 222
+    Check Sum = 0
+Read Pos. ID: Segment # = 0  ID = 0

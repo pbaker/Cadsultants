@@ -1,0 +1,27 @@
+
+Procedure KeyInfo(var message_string : message_array;
+                var message_count,
+                    page             : integer);
+{
+          KeyInfo - Describes Program Control Keys
+-------------------------------------------------------------------------------
+     Procedure to display information about certain keys used to
+control program direction.
+}
+
+var
+  I  : Integer;
+
+Begin
+
+message_string[1]  := '    PC WorkPLOT 2.1';
+message_string[2]  := '    Program Control Keys: ';
+message_string[3]  := ' ';
+message_string[4]  := '    Use Function Keys F1 - F10       '+#26+' Next Menu';
+message_string[5]  := '    To Select Menu Items             '+#27+' Last Menu';      ;
+message_string[6]  := '                                     '+#25+' End Program';
+message_count      := 6;
+page               := 0;
+
+End;   {procedure  :  KEYINFO}
+

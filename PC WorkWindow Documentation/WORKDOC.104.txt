@@ -1,0 +1,615 @@
+@pageheading()
+@pagefooting()
+@blankspace(10 lines)
+@center[@B(PC WorkWindow II)]
+@center[@B(Version 1.04)]
+@blankspace(2 lines)
+@center[@B(Reference Manual)
+@blankspace(10 lines)
+@B(Copyright 1987 CADSULTANTS, INC.)
+@B(ALL RIGHTS RESERVED)]
+@newpage
+@pagefooting()
+@blankspace(10 lines)
+@B(NOTICE)
+@blankspace(1 line)
+The information contained in this document is subject to change without
+notice.
+@blankspace(1 line)
+CADSULTANTS MAKES NO WARRANTY OF ANY KIND WITH REGARD TO 
+THIS MATERIAL INCLUDING, BUT NOT LIMITED TO THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE.  Cadsultants shall not be liable for errors contained herein
+or for incidental or consequential damages in connection with the
+furnishing, performance, or use of this material.
+@blankspace(1 line)
+This document contains proprietary information which is protected
+by copyright.  All rights are reserved.  No part of this document
+may be photocopied or reproduced without the prior written consent
+of Cadsultants.
+@blankspace(10 lines)
+@flushleft[IBM PC is a trademark of IBM Corporation
+Unigraphics is a trademark of McDonnell Douglas Corporation
+PC WorkWindow is a trademark of CADSULTANTS, INC.]
+@pageheading(left="PC WorkWindow II",
+right="Version 1.04",line="User Reference Manual")
+@pagefooting()
+@newpage
+@set(page =0)
+@blankspace(6 lines)
+@B[@UX(TABLE OF CONTENTS)]
+@blankspace(4 lines)
+@B(Introduction ............................................ 1)
+@blankspace(1 line)
+@B(Hardware Requirements ................................... 2)
+@blankspace(1 line)
+@B(Host Connection ......................................... 3)
+@blankspace(1 line)
+@B(Hardware Installation ................................... 4)
+@blankspace(1 line)
+@B(Software Installation ................................... 5) 
+@blankspace(1 line)
+@B(General Operation ....................................... 6)
+@blankspace(1 line)
+@B(Keyboard Layout ......................................... 7)
+@blankspace(1 line)
+@B(Graphics Input Device ................................... 11)
+@blankspace(1 line)
+@B(WorkWindow System Control Functions ..................... 12)
+@blankspace(1 line)
+@B(Local Zoom/Pan .......................................... 15)
+@blankspace(1 line)
+@B(Appendix ................................................ 19)
+@blankspace(1 line)
+@B(Illustrations ........................................... 22)
+@pagefooting[center="@value(Page)"]
+@newpage
+@B[@U(INTRODUCTION)]
+@blankspace(2 lines) 
+PC WorkWindow software adapts the IBM PC, XT, AT and most
+IBM-type microcomputers for use as a full-function graphics
+workstation to McDonnell Douglas' Unigraphics CAD/CAM system. PC
+WorkWindow software performs all of the functions necessary to
+communicate with a DEC or Data General host computer, running
+Unigraphics - Communications, Graphics Emulation, Screen
+Formatting, Crosshair Display, Keyboard Mapping, etc.
+@blankspace(2 lines)  PC WorkWindow features dual-screen
+operation, like that of expensive, yet less-flexible Unigraphics
+workstations.  A standard PC monitor is used to display
+Unigraphics prompts and menus in conventional format.  A
+high-speed graphic controller & a high-resolution graphics
+monitor are used to display Unigraphics parts and drawings. 
+@blankspace(2 lines) 
+The PC keyboard is specially programmed to emulate the
+Unigraphics PFK/GFK.  Several optional devices are also available
+for this purpose.  A graphic input device (mouse, joystick,
+etc.) is used to control the graphics crosshair.  All interactive
+Unigraphics functions are supported, as are enhanced functions -
+file transfer, printer output, local zoom/pan, and more - which
+have been added to PC WorkWindow software.
+
+@newpage
+@B[@UX(HARDWARE REQUIREMENTS)]
+@blankspace(2 lines) 
+PC WorkWindow requires the following minimum PC configuration:
+@begin(verbatim)       - 256k RAM
+       - 1 floppy diskette drive
+       - 2 RS-232 serial ports
+       - PC monitor & controller (MDA, CGA or EGA)
+       - 1 free expansion slot (for graphic controller)
+@end(verbatim)
+
+Specific add-on graphics hardware, required by PC
+WorkWindow software includes:
+@begin(verbatim)	  -  A graphic controller board
+
+		WYSE 700
+		ARTIST MONOCHROME
+		ARTIST 1
+		ARTIST 1+
+		ARTIST 10
+
+	  -  A high-resolution, analog graphics monitor (color or mono)
+
+		HITACHI
+		MITSUBISHI
+		AMTRON
+		ARTSCREEN
+		MONITRONIX
+		WYSE
+		Others are supported
+
+	  -  A graphics input device
+
+		SUMMAGRAPHICS 445 OPTICAL MOUSE
+		CH PRODUCTS MICROSTICK JOYSTICK
+		Others to be announced
+@end(verbatim)
+
+@newpage
+@B[@UX(HOST CONNECTION)]
+@blankspace(2 lines) The Unigraphics workstation configuration
+file (UGFILES.DAT) should be modified to address the PC as a
+model D100S/D90 workstation (refer to Unigraphics Documentation
+pertaining to the addition of graphics workstations).  Baud rates
+from 300 to over 19,200 are supported by PC WorkWindow and can be
+set to match the desired host baud rate, by editing WORK.CFG - a
+configuration file (see Appendix to this manual).
+@blankspace(2 lines)
+A single RS-232 serial connection (3-wire cable, modem, etc.)
+should be made between the Unigraphics Host system and the COM1:
+serial port of the PC.
+
+@newpage
+@B[@UX(HARDWARE INSTALLATION)]
+@blankspace(2 lines) PC WorkWindow requires the installation of a
+graphic controller board into an empty slot in the PC's expansion
+chassis. Both 8- and 16-bit controllers are supported.  Please
+refer to the manufacturer's instructions (packaged with the
+controller) for details on this procedure.  PC WorkWindow System
+Packages - which include the graphic controller and monitor - are
+pre-configured and tested to ensure quick, trouble-free
+installation.  Typically, all that is required after installing
+the graphic controller board is to connect the monitor cables,
+and turn on the power switch.
+@blankspace(2 lines) PC WorkWindow System Packages also include a
+serial I/O board for use with the graphic input device (also
+supplied).  This board is defined as COM2: (standard address &
+interrupt), with a 25-pin male DB25 connector.  The input device
+connection can be made without adapters, gender changers, null
+modems or jumper wires.
+
+@newpage
+@B[@UX(SOFTWARE INSTALLATION)]
+@blankspace(2 lines)
+PC WorkWindow is supplied on a single 5-1/4" low-density (360K
+bytes) floppy diskette in MS-DOS format, as a single program file
+named WORK.EXE.   A configuration file, named WORK.CFG is also
+provided and is required at run-time.
+@blankspace(2 lines)
+WORK.EXE is SOFTWARE PROTECTED.  This does not mean that a backup
+copy cannot be made; it does mean that the physical, ORIGINAL
+diskette must be used when running the program from a floppy
+drive, OR that a special program must be used to install WORK.EXE
+on HARD DISK.  Once installed on hard disk, the floppy is not
+required.
+@blankspace(2 lines)
+Floppy-drive users should make a COPY of the original diskette,
+and store the COPY for safekeeping.  If WORK.EXE is accidentally
+deleted from the ORIGINAL diskette, the backup diskette can be
+used to re-copy the program back onto the original.  
+@blankspace(2 lines)
+Hard-drive users should run the A:HDUTIL.EXE
+program.  HDUTIL will prompt the user through the hard disk
+installation procedure.  Upon completion of HDUTIL's INSTALL
+procedure, CREATE a directory named C:\WORK.  Then, COPY both
+WORK.EXE and WORK.CFG from the ORIGINAL diskette to this
+directory.
+@blankspace(2 lines)
+The configuration file, WORK.CFG, is a user-modifiable ASCII text
+file which contains information about the graphic controller (the
+first 12 lines), the host baud rate (line 13) and the mouse baud
+rate (line 14).  These parameters are detailed in the Appendix to
+this manual.
+
+@newpage
+@B[@UX(GENERAL OPERATION)]
+@blankspace(2 lines) To begin Unigraphics operation, type in the
+PC WorkWindow program name (WORK) followed by a carriage return
+(PC ENTER key).  A "status line"  will appear at the bottom of
+the PC monitor screen; a second carriage return should display
+the normal operating system prompt from your DEC or DG host
+computer.  Subsequent keyboard entry is transmitted to the host
+computer, and echoed by the host to the PC screen.  If there is
+no host response to keyboard input, re-check communication
+parameters (baud rate) and the physical PC-to-Host connection.  
+@blankspace(2 lines)
+Once communication with the host computer has been established,
+execute the normal command sequence used to run Unigraphics.  PC
+WorkWindow will automatically display Unigraphics logon
+information, followed by the usual Unigraphics menu options, on
+the PC screen.  At this point, PC WorkWindow users should be
+familiar with the PC WorkWindow keyboard layout, discussed in the
+next section...
+
+@newpage
+@B[@UX(UNIGRAPHICS KEYBOARD LAYOUT)]
+@blankspace(2 lines)  The PC keyboard is fully programmed for
+Unigraphics operation (see appendix for illustration of PC
+keyboard layout). The keyboard layout has been carefully designed
+for efficient Unigraphics operation, albeit different than
+conventional workstations which use a PFK/GFK.  The PC's
+alphabetic keys are used to enter text, both upper and lower
+case.  The top row numeric keys are used to enter numbers. The
+numeric keypad is reserved for Unigraphics and PC WorkWindow
+system control functions.
+@blankspace(2 lines)
+@B(Selecting Unigraphics Menu Options 1 through 14)
+@blankspace(2 lines)
+Unigraphics menu options 1 through 10 are selected using the
+standard PC Function Keys labeled F1 through F10.  Unigraphics
+menu options 11, 12, 13 and 14 require the use of the ALT key in
+conjunction with F1, F2, F3 and F4 respectively.
+@blankspace(2 lines)
+@B(Selecting Unigraphics Functions)
+@blankspace(2 lines) Unigraphics FUNCTIONS (as distinguished from
+the 14 possible MENU OPTIONS) are selected using the ALT key in
+combination with the first letter of the desired function.  For
+example, Calculator is ALT-C, Display Control is ALT-D,
+File/Terminate is ALT-F, etc.  This provides a simple-to-learn,
+easy-to-use method of operation, when using a single keyboard. 
+Furthermore, all Unigraphics FUNCTIONS and the ALT-Key
+combination used to select them are displayed on the PC screen
+(see section titled ALT-KEY Function Menu).
+@blankspace(2 lines)
+When running Unigraphics II, three exceptions to the ALT-first letter
+scheme (described above) should be noted:
+@blankspace(1 line)
+@begin(verbatim)
+                   Unigraphics Function    Alt-key
+
+                   CHANGE MODULE           ALT 1
+                   MODULE FUNCTION         ALT 2
+                   MODULE PARAMETERS       ALT 3
+@end(verbatim)
+
+@newpage
+@B(Unigraphics Control Keys)
+@blankspace(2 lines) The Unigraphics software control functions
+REJECT, ENTRY COMPLETE, TEMINATE, and ALTERNATE ACTION are
+selected using the "cursor arrow" keys in the numeric keypad
+section of the PC keyboard:
+
+@begin(verbatim)			Unigraphics 		PC Key
+			Control Function   
+
+               REJECT              Left Arrow     
+               ENTRY COMPLETE      Right Arrow    
+               TERMINATE           Down Arrow      
+               ALTERNATE ACTION    Up Arrow        
+@end(verbatim)
+@blankspace(2 lines)
+@B(Convenience Keys)
+@blankspace(2 lines)
+Two additional keys for the frequently used functions, ZOOM and
+REDISPLAY, are located in the numeric keypad area.  The first key
+is labeled "Pg Up" and selects the Unigraphics REDISPLAY
+function.  The second key is "Pg Dn" and selects the either the
+Unigraphics ZOOM function or special workstation ZOOM (discussed
+later), depending on the graphics controller being used. 
+@blankspace(2 lines)
+@B("ALT-KEY" Function Menu)
+@blankspace(2 lines)
+During Unigraphics operation, PC WorkWindow will indicate which
+Unigraphics FUNCTIONS are available at any given time, and which
+keys are used to select each function.  This ALT-KEY Function
+Menu is displayed at the center of the PC screen.  The display of
+this information can be alternately enabled/disabled by
+selecting the END key on the PC keyboard. 
+@blankspace(2 lines)
+On the IBM PC and PC/XT, performance is generally improved when
+the function menu display is disabled.
+@blankspace(2 lines) A special ALT-KEY function, which does not
+appear in the Function Menu is used to generate a view only,
+graphics screen image, referred to as a Picture File.  ALT-P (for
+Picture) will automatically cause Unigraphics to REDISPLAY the
+current graphics image.  As graphics data is received and
+displayed, it is also converted and stored on diskette/hard disk
+in MS-DOS file format.  This vector file can be redisplayed by
+any PC WorkWindow workstation, without being connected to the
+Unigraphics host.  Local ZOOM/PAN functions may be used, if
+supported by the hardware configuration.  Optional software is
+available to redisplay Picture Files using MDA, CGA and EGA
+display adapters, and for plottting on Hewlett-Packard Pen
+plotters.
+@newpage
+@B[@UX(GRAPHICS INPUT DEVICE)]
+@blankspace(2 lines)
+The standard graphics input device supplied with PC WorkWindow is
+the Summagraphics #445 optical mouse.  This mouse is configured
+to operate at 1200 baud.  For use with other PC software, the
+Summagraphics 445 emulates the PC Mouse from Mouse
+Systems and the Microsoft Mouse.
+@blankspace(2 lines)
+The mouse is used to position the graphics screen crosshair.
+Positional data is transmitted to the host by depressing the
+space bar on the PC keyboard or the left-most mouse button.  The
+middle and right-most mouse buttons are programmed to send the
+Unigraphics functions REJECT  and ENTRY COMPLETE, and are
+functional when the crosshair is displayed (see appendix for
+illustration - Mouse Control Keys).
+@blankspace(2 lines) The mouse buttons may have alternate meaning
+when used to control local Zoom/Pan functions available with
+certain graphics controllers.
+@blankspace(2 lines) The ratio of movement between the graphic
+input device and the screen crosshair is "adjustable".  Ten
+(10) ratios are selectable, using the plus (+) and minus (-) keys
+located on the numeric keypad.  The ratio may be changed ONLY
+when the crosshair is visible, by increasing (plus key) or
+decreasing (minus key) the default setting.  A "beep" will sound
+indicating when either the minimum or maximum setting has been
+reached.
+@newpage
+@B[@UX(WORKWINDOW SYSTEM CONTROL FUNCTIONS)]
+@blankspace(2 lines)
+The HOME key is used to access PC WorkWindow System Control
+Functions. These functions appear in a "pop-up" window which
+overlays the normal PC screen data.  When displayed, local
+control functions may be selected using PC Function Keys F1 - F10.
+@blankspace(2 lines)
+PC WorkWindow System Control Functions appear as follows:
+@begin(verbatim)
+F1  Emulation Mode ....... D90/tektronix
+F2  Screen Clear Mode .... scroll/FLASH
+F3  Menu Display ......... COLOR/mono
+F4  GraphText Hardcopy ... OFF/on
+F5  DiskPrint File ....... CLOSED/open
+F6  Display Picture File
+F7  Read Color Table
+F8  Write Color Table
+F9  Clear Graphics Screen
+F10 Exit to DOS
+
+
+Each function is explained in more detail, below.
+
+F1  Emulation Mode ....... D90/tektronix
+
+    Used to select D90 or Tektronix 4014 emulation mode.  The
+    default mode is D90, which is required to operate
+    Unigraphics.  The 4014 mode can be used with other
+    host-resident software packages which support this protocol. 
+
+F2  Screen Clear Mode .... scroll/FLASH
+
+    Used to select the manner in which the ARTIST 10 graphic
+    controller memory is "erased".  FLASH mode - the default - is
+    very fast, but produces a momentary flash which may be
+    objectionable in certain lighting conditions.  In dark or dim
+    lighting, the SCROLL option eliminates the flash, but
+    executes somewhat slower.
+
+    Note:  This option applies only to the ARTIST 10 controller,
+    and will be eliminated in a subsequent software release.
+
+F3  Menu Display ......... COLOR/mono
+
+    Used to control the use of color for Unigraphics menu
+    options.  Certain PC video controllers emulate the IBM Color
+    Graphics Adapter (CGA) functions, but use a green/amber
+    monitor.  Certain colors are not easily visible, without
+    adjusting the brightness/contrast controls to near maximum.
+    This often causes brighter colors to "burn" the screen.  When
+    using such hardware, select the MONO option for a bright
+    white/light grey character display (like that on conventional
+    Unigraphics workstations), better suited to this
+    configuration.
+
+F4  GraphText Hardcopy ... OFF/on
+
+    When turned ON, all alphanumeric data normally listed on the
+    graphics monitor will also be sent to LPT1: - the primary PC
+    printer port.  Output to the printer is buffered, allowing
+    Unigraphics operation to continue without waiting for the
+    printer to finish.  Care should be taken not to exit to DOS
+    while printing data, since output will immediately cease.
+
+F5  DiskPrint File ....... CLOSED/open
+
+    This option will prompt for a PC filename, which will be
+    created and opened for writing.  ALL subsequent printer
+    output will be re-directed to this file.   This function can
+    be i) used to "capture" Unigraphics menu screens using the
+    Shift-PrtSc combination, ii) used in conjunction with
+    GraphText Hardcopy to "capture" directory listings, GRIP
+    programs, CL-files, etc., as they are displayed on the
+    graphics monitor, iii) used with Tektronix mode to obtain OS
+    file listings, UGFM output, etc.
+
+F6  Display Picture File
+
+    Used to display graphics images from diskette or hard disk,
+    previously created by the Picture File function (ALT-P). 
+    Images may be displayed using local zoom/pan operations,
+    and/or plotted using thr PC WorkPLOT module.  Other options
+    are currently being developed.
+
+F7  Read Color Table
+
+    Used to read a disk/diskette file, to change the current
+    color palette settings.  See F8 - Write Color Table.
+
+F8  Write Color Table
+
+    Used to write the current color palette settings (as set by
+    Unigraphics) to a PC file.  This file contains 3 lines for
+    each of the 16 color values (48 lines total).   Each line
+    will contain an integer from 0 - 16, which determines the
+    relative intensity of the RED (1st line), GREEN (2nd line)
+    and BLUE (3rd line) "guns" used to produce a particular color 
+    on the graphics monitor.  This function was developed to
+    allow UNIPIX screen images (saved with the Picture File
+    function) to be re-displayed using alternate color palettes,
+    for the purpose of output to a 35mm slide camera!
+
+F9  Clear Graphics Screen
+
+    Clears the graphic controller memory & display.
+
+F10 Exit to DOS
+
+    Terminates WORK.EXE in an orderly fashion and returns control
+    to the MS-DOS operating system.  
+
+    Incoming data (if any) from the host will be ignored.
+
+    Unigraphics operation can be resumed without interruption
+    (all serial interface signals are maintained, so that the
+    host will not sense a terminal "disconnect"), by re-running
+    WORK.EXE. The previously displayed Unigraphics menu will be
+    restored, if using a CGA or EGA video controller.  If using
+    an MDA (Monochrome Display Adapter), the Unigraphics screen
+    will appear blank, however any valid Unigraphics menu option
+    selection will generate a new display.
+@end(verbatim)
+@newpage
+@B[@UX(Local Zoom/Pan)]
+@blankspace(2 lines)
+In addition to standard Unigraphics ZOOM/PAN/REGEN functions, PC
+WorkWindow utilizes the hardware zoom, pan and scroll functions
+built into the graphics processor chip of the graphic controller.
+The Artist Monochrome, Artist 1 and Artist 1+ use the NEC 7220
+graphics chip.  The Artist 10 controller uses the more powerful
+Hitachi Advanced CRT Controller (ACRTC).  The Wyse 700 does not
+support hardware Zoom/Pan capability. 
+@blankspace(2 lines)
+@B(Hardware Zoom)
+@blankspace(2 lines)
+In order to effectively use these functions, it is advantageous
+to understand the underlying principles and procedures used...
+@blankspace(2 lines) The hardware zoom technique used is commonly
+called pixel replication or pixel "blossom".  Simply, the
+controller magnifies the graphics image by doubling (for a 2x
+zoom) the number of pixels in both the X and Y directions, and
+ignoring that part of the image which extends beyond the screen
+boundaries.  Zoom is incremental in nature; 2x, 4x, etc., and is
+virtually instantaneous.  The entire drawing image may be
+"panned" across the zoom window by moving the mouse/joystick.
+Normal Unigraphics operation continues during these image
+operations.  A possible disadvantage to pixel replication is the
+effective loss of resolution as the zoom factor is increased. 
+For this reason, PC WorkWindow limits hardware zoom to 4x (out of
+16x); beyond this range, the image loses substantial detail and
+becomes difficult to view.
+@blankspace(2 lines)
+@B(Display List Zoom)
+@blankspace(2 lines)
+The Artist 10, with its more advanced graphics chip, provides yet
+another variation of local zoom.  This method uses a vector
+display list, maintained in RAM or on hard disk, by PC WorkWindow
+software.  As with hardware zoom, the user may select 1x, 2x or
+4x magnification; in fact hardware zoom is employed to determine
+the Zoom factor and drawing area to be viewed.  Hardware zoom
+might be considered a "stepping stone" procedure to achieve
+Display List Zoom.  When Display List Zoom is selected, hardware
+zoom factors are reset, and the drawing is momentarily
+redisplayed at full scale.  The Display File is immediately
+processed by PC WorkWindow software, applying the necessary
+transformation factors and coordinate offsets to generate a new
+screen image.  Vector clipping is performed at high-speed by the
+graphics hardware.  The advantage to this method is speed far
+greater than Unigraphics ZOOM, without appreciable loss of
+resolution.
+@blankspace(2 lines)
+@B(Zoom Control)
+@blankspace(2 lines) The PC key labeled PgDn, located in the
+numeric keypad section of most keyboards is used to access all
+local zoom/pan operations - both hardware and display list
+processing.  This same key will CANCEL and RESET the screen
+display when selected a second time.   If the controller used
+does not support local zoom/pan operations of any type, the PgDn
+key simply invokes the Unigraphics ZOOM/PAN/REGEN function
+(ALT-Z).
+@blankspace(2 lines) When selected, PgDn will display a
+rectangular Zoom Box on the graphics screen.  The Box can be
+moved around the screen using the graphics input device.  For
+simplicity, we shall assume this device to be the 3-button
+Summagraphics 445 mouse.  Other devices work in a similar manner.
+Depressing the left-most mouse button will INITIATE hardware
+zoom; the image bounded by the Zoom Box will immediately be
+enlarged to fill the screen.  The middle button will UNDO the
+Zoom operation, and also ALTER the size of the Zoom Box prior to
+zooming in.  The right-most button will FREEZE the current operation,
+at whatever state the screen is in.  It may be helpful to view
+the following table:
+@begin(verbatim)
+		Mouse Button		Zoom Function
+	
+		 LEFT			INITIATE
+		 MIDDLE             UNDO/ALTER
+		 RIGHT			FREEZE
+@end(verbatim) During local Zoom operation, selecting any key on
+the keyboard will also FREEZE the current display operation;
+furthermore the key pressed will be transmitted to Unigraphics
+for interpretation.
+@blankspace(2 lines)
+@B(Pan Control)
+@blankspace(2 lines) Immediately after INITIATING hardware zoom,
+but prior to a FREEZE operation, the entire original screen area
+can be dynamically "panned" by moving the input device.  All of
+the Zoom control keys remain in effect.
+@blankspace(2 lines)
+@B(Display List Zoom Control)
+@blankspace(2 lines) Display List Zoom is activated by selecting
+the left-most mouse button TWICE, during the Zoom operation; the
+first time to INITIATE hardware zoom (& pan), and the second to
+process the Display List.  Display List Zoom is CANCELLED & RESET
+using the PgDn key, in exactly the same manner as hardware zoom. 
+All Zoom operations cause a message to be displayed on the status
+line of the PC monitor.
+
+@newpage
+@blankspace(10 lines)
+@center[@B(Appendix)]
+
+@newpage
+@B(WORK.CFG)
+@blankspace(2 lines)
+WORK.CFG is an ASCII text file containing system configuration information.
+A sample listing follows:
+@begin(verbatim)
+0		interlaced mode
+64		active words
+7		horizontal sync
+3		vertical sync
+3		horizontal front porch
+9		horizontal back porch
+3		vertical front porch
+26		vertical back porch
+768		active lines
+768		display length
+1024		maxx
+768		maxy
+12        baud rate factor for host
+96        baud rate factor for graphics input device
+@end(verbatim)
+If you are using an ARTIST MONOCHROME, ARTIST 1 or ARTIST 1+
+graphic controller, the first 12 lines of WORK.CFG are used to
+properly initialize same, for use with a particular monitor.  A
+monitor set-up sheet is included with each controller, and should
+exactly match the contents of WORK.CFG.  If you are using an
+ARTIST 10 controller, the first 12 lines of WORK.CFG are ignored,
+although they must physically exist.
+@blankspace(2 lines)
+Line 13 is an integer "factor" used to set the baud rate for COM1: - the
+Host serial port connection.
+@blankspace(2 lines)
+Line 14 is an integer "factor" used to set the baud rate for
+COM2: - the Graphics Input Device serial port connection.
+@blankspace(2 lines)
+The following table lists all possible values for this parameter
+and the corresponding baud rate:
+@begin(verbatim)
+		FACTOR FOR WORK.CFG				BAUD RATE
+
+          384							300
+		96 ------------------------------- 1200
+		48							2400
+		24 ------------------------------- 4800
+		12							9600
+		6 -------------------------------- 19200
+		3						     38400
+		2 -------------------------------- 56000
+
+@end(verbatim)
+The default setting for the Host port is 12 (9600 baud).  The
+Summagraphics 445 mouse is hardwired for operation at 1200 baud
+(a factor of 96) and should not be changed.  Other devices
+(joysticks, trackballs, etc.) may require a change to this
+parameter.
+
+@newpage
+@blankspace(10 lines)
+@center[@B(PC WorkWindow Illustrations)]
+
+

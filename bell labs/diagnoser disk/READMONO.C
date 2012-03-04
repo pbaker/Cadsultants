@@ -1,0 +1,87 @@
+#include "stdio.h"
+
+
+
+extern char far *mono_ptr;
+
+
+
+void far output_a_char(the_char,row,col,the_attribute)
+int the_char,row,col,the_attribute;
+{
+	*(mono_ptr + row*160 + (col << 1)) = the_char;
+	*(mono_ptr + row*160 + (col << 1) + 1) = the_attribute;
+}
+
+
+
+
+
+void far read_mono_string(return_string,row,col,the_attribute)
+char far return_string[];
+int row,col,the_attribute;
+{
+int i,ch;
+
+
+start_over:
+
+	ch = getch();
+	if(ch == 0)
+	{
+		return_string[0] = '\0';
+		return;
+	}
+
+
+	output_a_char(ch,row,col,0x70);
+	return_string[0] = ch;
+
+
+	i = 1;
+	for(ch = getch() ; (ch != 13) /*enter key*/
+		 && (ch != 0) ; ch = getch())
+	{
+		if(ch != 8)
+		{
+			output_a_char(ch,row,col + i,0x70);
+			return_string[i] = ch;
+			i++;
+		}
+		else
+		{
+			if(i > 0)
+			{
+				i--;
+				output_a_char(' ',row,col + i,0x70);
+			}
+		}
+	}
+
+
+	return_string[i] = '\0';
+
+
+	if(ch == 0)
+	{	ch = getch();
+
+		switch(ch)
+		{
+			case 75 : /*reject*/
+				goto start_over;
+
+
+			case 77 : /*entry complete*/
+				break;
+	
+			case 80 : /*terminate*/
+			{
+				return_string[0] = '\0';
+				break;
+			}
+		}
+	}
+
+}
+
+

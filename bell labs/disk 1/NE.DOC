@@ -1,0 +1,373 @@
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      THE NORTON EDITOR
+                         Version 1.3
+
+
+                      The Norton Editor
+                        User's Manual
+
+Table of contents (Use F6 G) to goto     Line 
+
+Getting Started Fast.......................72
+
+Command Summary...........................111
+General Information.......................182
+     Important & Special features.........188
+     Shift keys...........................230
+     Command structure....................248 
+     Backup file names....................274
+Starting the editor.......................289
+Editor help & status......................372
+Cursor movements.......................... 12
+Delete commands........................... 13
+Find & replace commands................... 14
+Block commands............................ 16
+File & disk commands...................... 18
+Screen & format commands.................. 20
+Printer commands.......................... 23
+Miscellaneous commands.................... 24
+Mouse support............................. 28
+     Mouse scroll areas................... 28
+Editing large files....................... 32
+Dealing with disk full problems........... 33
+Miscellaneous notes....................... 34
+Special concerns.......................... 35
+Error messages............................ 36
+Background information.................... 40
+
+                              3
+
+Getting started fast
+
+The Norton's Editor is a programmer's editor that's easy to
+learn and use. You can start using it immediately, without
+having to study this manual.
+
+There are three things you need to know to get started fast:
+how to start, how to end and how to get help in the middle.
+
+Start the editor like this, with or without the name of a
+file to edit:
+
+NE
+NE {filename}
+
+End the editing session by pressing F3 followed by E (to
+exit, saving the edited data) or F3 followed by Q (to quit
+without saving your work).
+
+To get help in the middle of your editing session, simply
+press F1 to display the Norton Editor's help screens.
+
+Here's a summary of the other Norton Editor function keys:
+
+     F2   status display screen
+     F3   lead in key for file & disk commands
+     F4   lead in key for block commands
+     F5   lead in key for screen & format commands
+     F6   lead in key for miscellaneous commands
+     F7   lead in key for printer commands
+     F8   reserved for future use
+     F9   DOS command processor
+     F10  Reserved for future use
+
+That's all you need to know to get started fast with the
+Norton Editor. When your ready for more details, read the
+rest of this manual.
+
+                              4
+COMMAND SUMMARY
+
+Here is a summary of the commands the Norton Editor provides:
+
+F1 - Help
+
+F2 - Status
+
+F3 - File commands
+     E - Exit, save data and end the session.
+     Q - Quit, discard data and end the session
+     S - Save, write the data and continue session.
+     X - eXchange windows, switch to other window.
+     N - New, edit a new file.
+     A - Append another file to end of edit data.
+     W - Write part of data to disk.
+     L - Load more data from a large file.
+     C - Close the output file, open new output.
+
+F4 - Block commands
+     S - Set a block marker.
+     R - Remove a block marker.
+     D - Delete a block.
+     C - Copy a block.
+     W - Window to window block copy.
+     M - Move a block
+     L - Line, mark an entire line as a block.
+     E - End of line, mark to end of line as a block.
+     F - Find a block marker.
+
+F5 - Screen format commands
+     L - Line length, set line length.
+     W - Word wrap, toggle on and off.
+     F - Format a paragraph.
+     T - Tab, set tab spacing.
+     I - Indent, toggle auto indent on and off.
+     C - Cursor, set cursor type.
+     D - Display, set display color.
+     S - Save editor with new defaults set.
+     K - Key define, change operation of TAB & INS keys.
+
+                              5
+
+ F6 - Miscellaneous commands
+     G - Goto a line number.
+     M - Matching punctuation, finds matching symbol.
+     C - Condensed display mode.
+     Ins - Insert mode cancel, switch to replace mode.
+     T - Test windows for differences.
+
+F7 - Printer commands
+     P - Print entire edit buffer.
+     B - Block, print marked block.
+     E - Eject paper (form feed).
+     S - Size in lines per page.
+     M - Margin, set left margin for printer.
+
+F9 - DOS Command processor
+
+Other Commands:
+     F1 - Help screens.
+     F2 - Status display.
+     F9 - Dos command processor.
+     Ins - Insert, switch to insert mode.
+     ^U - Undelete.
+     ^F - Find or find & replace.
+     ^C - Continue find operation.
+     ^P - Insert control characters.
+     ^V - Vice versa, flip upper and lower cases
+
+                              6
+General Information
+
+Here is general information about the Norton Editor to help you 
+understand its features, how the commands are organized, and
+some of the philosophy that underlies the editor.
+
+Important and Special Features
+
+The Norton Editoe uses all of available memory so that none of
+your computers resources go to waste. Typically, on a PC with
+640K of memory, the editor can hold well over 500K of file data
+in memory. Regardless of how much memory is available, The
+Norton Editor can edit files of any size, no matter how large.
+The editor can also handle unusually long lines, up to nearly
+64K in size. You'll find that the Norton Editor places almost no
+limits on the work it can do.
+
+The Norton Editor has many features that are particularly useful
+for writing programs. Among them are compressed display mode
+(activated with F6 C), and automatic indentation (F5 I).
+
+The Norton Editor also provides many features that make it
+convenient for word processing as well. Among the word oriented
+features are cursor movement by word, word-delete in either
+direction, automatic word wrap when writing and paragraph
+reformatting. 
+
+The Norton Editor gives you access to DOS commands through a
+command processor feature. You can perform any DOS command and
+run any program using this feature.
+
+The Norton Editor can be used with a mouse.
+
+the Norton Editor can simultaneously edit two files, in separate editing
+windows, and move data between them.
+
+The Norton Editor can easily be configured and saved. You can make as many
+customized versions of the editor as you wish, each configured
+the way you want it.
+
+Shift Key Notation.
+
+Throughout this manual, Alt-X indicates key combinations that
+are formed by holding down the Alt shift key followed by a
+letter key. ^-X indicates key combinations that are formed by
+holding down the Ctrl shift key followed by a letter key.
+
+                              7
+Shift Key Use
+
+
+The Norton Editoe uses the Ctrl and Alt shift keys in a very
+consistant manner; each shift key has a direction that it acts
+in. The rule is simple:
+
+	Ctrl is to the left or up, toward the top of the file.
+	Alt is to the right or down, toward the bottom of the file.
+
+It's easy to remember because it corresponds to their position
+on the standard keyboard; Ctrl is above Alt so Ctrl goes up and
+Alt goes down.
+
+Among the examples of these two shift keys are used are the two
+word deleting commands ^W and Alt-W. ^W deletes the word to the
+left of the cursor; Alt-W the word to the right.
+
+Command Structure
+
+The editors command structure is primarily based on the use of
+lead-in keys: a function key (F3-F7) followed by a letter key.
+The function key "leads in" to the command. When the function
+key has been pressed a brief, context sensitive help line
+appears on the screens status line. You will find this command
+structure quick and easy once you have become acquainted with it.
+
+Here is a brief summary of the use of the function keys:
+
+	F1 - help screens
+	F2 - status display screens
+	F3 - lead in key for file and disk commands
+	F4 - lead in key for block commands
+	F5 - lead in key for screen and format commands
+	F6 - lead in key for miscellaneous commands
+	F7 - lead in key for printer commands
+	F8 - reserved for future use
+	F9 - DOS command processor
+	F10- reserved for future use
+
+There are also a few commands that are based on Alt and Ctrl
+shift keys.
+
+                              8
+Backup File Names
+
+The Norton Editor has a special and useful way of dealing with
+backup files. As do many editors, the Norton Editor saves the
+existing file as the backup file, renaming it with the same name
+but a differant extension. However the Norton Editor uses a
+renaming scheme that preserves most of the original filename
+extension and also allows you to edit a backup file. Instead of
+giving the former file the extension of .BAK, the Norton Editor
+shifts the extension one character and adds the character "~" at
+the beginning of the extension. For example if we are working
+with a file named SOURCE.ASM, after an editing session the
+original file will be named SOURCE.~AS. If we edit that backup
+file the original file becomes SOURCE.~~A.
+
+During its operation, the Norton Editor uses a temporary file
+with $ as the first character of its filename extension. The
+rest of the temporary files name is the same as the name of the
+backup file. You should be aware of this filename so that you do
+not unintentionally delete it during the editing session.
+
+
+               			9
+
+STARTING THE NORTON EDITOR
+
+The Norton Editor can be started in several different ways to
+match your preferance. There are four parameters that you can
+optionally specify when you start the editor:
+
+	NE <starting line> <in file> <out file> </options>
+
+The first parameter is used to have the editor start operation
+with a jump to a given line number in the input file. The
+<starting line> parameter is specified with a + sign followed by
+the line number, for example: NE +100 INFILE. This feature is
+particularly useful when your compiler has reported an error at
+a particular line number in the program source. Using the
+<starting line> you can immediately skip to that part of the
+file. Ordinarily when the editor begins it displays a starting
+message and pauses waiting for a keystroke. However, when you
+use the <starting line> parameter, the editor immediately enters
+the editing mode without pausing. You can also use this feature
+to skip the opening message when starting the editor. Just
+specify the starting line parameter as + without a line number,
+and the editor will skip its starting screen and ump right into
+the editing mode.
+
+The second parameter, <input file>, is the one most commonly
+used. If you do not provide the name of an input file in the
+command line, the editor prompts you for one. If the <input file>
+already exists, the editor reads it, otherwise the editor
+creates a new file with that name.
+
+The third parameter, <output file>, is used only when you wish
+the editor to use a different name for the output file. If you
+do not specify a separate output file, the editor uses the input
+filename for the output filename. (As you'll see later, you can
+switch to another output filename while you are editing; see the
+F3 C command) The Norton Editor fully supports subdirectories,
+so you can include drive and path names as part of the file
+specifications.
+
+The final parameter, </options>, generally won't have to be
+specified. This parameter lets you specify special handling for
+video display adapters that show "snow" when the screen is being
+rewritten. The IBM Color Display, when being driven by the IBM
+Color Graphics Adapter, is the typical example of a display that
+"snows" with most programs. One of three arguments may be
+specified for this parameter: /DA,
+
+
+                               10
+
+automatically adjust to display; /DB, never "desnow"; and /DC,
+always "desnow". /DA is the default, meaning that when this
+option is omitted, the Norton Editor will attempt to
+automatically accommodate itself to the type of display you are
+using. This option is saved with the F5 S command (save editor),
+and needn't be specified after that unless you change displays.
+
+In a very few special cases, you will want to specify the /DB or
+/DC options. In particular, if you are using a 3270 PC, the
+Sigma 400 or IBM Professional Graphics display adapters, the
+Sharp 7000 or certain other LCD display machines, always use the
+/DB option, never "desnow". You should also specify this option
+if you computer "locks up" when you run the Norton Editor. If
+you aren't using any of the adapters mentioned above, and your
+display is showing "snow" with this argument omitted, you may
+wish to try the /DC option, always desnow.
+
+In some cases, the editor will perform desnowing when it is not
+needed. If you think this is happening, using the /DB flag will
+let the editor run faster and permit type ahead.
+
+
+                               11
+
+EDITOR HELP AND STATUS
+

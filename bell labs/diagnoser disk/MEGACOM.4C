@@ -1,0 +1,281 @@
+;
+; Serial Communication Routines
+; COM2 for MegaTEST
+;
+; Equates
+;
+  megatek_gauge	equ   4000
+  com2_base  	equ   02F8h
+  ctrl_Q 	   	equ     17
+  ctrl_S     	equ     19
+;
+_TEXT	SEGMENT  BYTE PUBLIC 'CODE'
+_TEXT	ENDS
+
+_DATA	SEGMENT  WORD PUBLIC 'DATA'
+
+  _spos2        dw 0
+  _epos2        dw 0
+  _count2       dw 0
+  _megatek_buffer  db 5000 dup (?)
+  megatek_gauge_status db 0
+
+_DATA	ENDS
+
+CONST	SEGMENT  WORD PUBLIC 'CONST'
+CONST	ENDS
+
+_BSS		SEGMENT  WORD PUBLIC 'BSS'
+_BSS      ENDS
+
+DGROUP	GROUP	CONST,	_BSS,	_DATA
+	ASSUME  CS: _TEXT, DS: DGROUP, SS: DGROUP, ES: DGROUP
+
+;
+  _text segment
+;
+   public _open_megatek, _write_megatek_buffer, _read_megatek_buffer
+   public _megatek_out
+;
+; output to megatek
+;
+  _megatek_out proc far
+;
+  push bp
+  mov  bp,sp
+  sub  sp,2
+
+  mov  ax,[bp+6]		; set up for FAR/HUGE!!!! else use bp + 4
+  push dx
+  push ax
+;
+  mov  dx,com2_base + 5 ; point to line status register for COM2
+;
+ get_stat:
+;
+  in   al,dx         ; get status byte
+  test al,32         ; check for hold register empty
+  jz   get_stat      ; loop until okay to send
+;
+  mov dx,com2_base   ; point to data register
+  pop ax
+  out dx,al          ; output character in al
+;
+  pop  dx
+  mov  sp,bp
+  pop  bp
+
+  ret
+;
+  _megatek_out   endp
+; --------------------------------------------------------------
+; initialize megatek communication port
+;
+  _open_megatek proc far
+;
+  push bp
+  mov  bp,sp
+  sub  sp,2
+
+  mov  ax,[bp+6]		; set up for FAR/HUGE!!!! else use bp + 4
+
+  push ax
+  push dx
+  push ds
+  push ax				; save baud factor
+;
+; Set communication parameters
+;
+  mov  dx,02F8h + 3
+  mov  al,80h
+  out  dx,al
+
+  pop  ax				; get baud factor
+  mov  dx,02F8h
+  out  dx,al
+
+  mov  al,ah
+  inc  dx
+  out  dx,al
+
+  mov  dx,02F8h + 3
+  mov  al,00000011b
+  out  dx,al
+;
+; set com2 interrupt handler address
+;
+  push cs
+  pop  ds	                		 ; DS is segment of interrupt handler
+  mov  dx,offset _write_megatek_buffer              ; DX is offset
+  mov  al,0Bh					 ; com2 interrupt is 0b hex
+  mov  ah,25h					 ; DOS function to set interrupt vector
+  int  21h					 ; 
+;
+; clear port...
+
+  mov dx,02F9h 				; point to Interrupt Enable register
+  mov al,0h    				; set to NO interrupt on Received Data
+  out dx,al    				; Interrupt now disabled at com2 ACE
+;
+; then, disable 8259 interrupt chip for IRQ3
+;
+  in  al,21h   				; 8259 mask register
+  and al,11110111b
+  or  al,00001000b 				; 1 at bit 3
+  out 21h,al   				; interrupt masked (turned off)
+;
+; Now, enable com2 ACE
+;
+  mov dx,02F9h 				; point to Interrupt Enable register
+  mov al,1      				; set to interrupt on Received Data
+  out dx,al    				; Interrupt now enabled at com2 ACE
+;
+  mov dx,02FCh  				; modem control register
+  mov al,09h
+  out dx,al
+;
+; enable 8259 interrupt chip for IRQ3
+;
+  in  al,21h   				; 8259 mask register
+  and al,11110111b 				; 0 at bit 3
+  out 21h,al   				; interrupt unmasked 
+;
+  pop  ds
+  pop  dx
+  pop  ax
+;
+  mov  sp,bp
+  pop  bp
+;
+ ret
+;
+  _open_megatek  endp
+; --------------------------------------------------------------
+ _write_megatek_buffer proc far
+;
+  push  ax
+  push  bx
+  push  cx
+  push  dx
+  push  ds
+  push  es
+  push  ss
+  push  di
+  push  si
+  push  sp
+  push  bp
+  pushf
+ 
+  mov  ax,dgroup
+  mov  ds,ax
+
+  mov   dx,2fdh  ; line status register
+  in    al,dx    ; get status byte
+  test  al,01h   ; check for character received
+;
+  jz    b2_end   ; if no character, return
+
+  mov   dx,2f8h  ; received data register
+  in    al,dx    ; get character
+;
+  mov  bx,_epos2   
+;
+  mov  _megatek_buffer[bx],al     ; write character to buffer
+;
+  inc  _epos2                  ; increment pointer
+  inc  _count2                 ; increment count
+;
+  mov  ax,_epos2            ; check for buffer near full
+  cmp  ax,megatek_gauge
+  jne  b2_end
+  mov  al,ctrl_S
+  push ax
+  call _megatek_out
+  add  sp,2
+  mov  megatek_gauge_status,1      ; status is near full
+;
+ b2_end:
+;
+  mov  al,20h
+  out  20h,al
+
+  popf
+  pop  bp
+  pop  sp
+  pop  si
+  pop  di
+  pop  ss
+  pop  es
+  pop  ds
+  pop  dx
+  pop  cx
+  pop  bx
+  pop  ax
+
+  iret
+;  
+  _write_megatek_buffer endp
+;
+; ------------------------------------------------------
+;
+  _read_megatek_buffer  proc far
+;
+  push bp
+  mov  bp,sp
+;
+  push bx
+  push ds
+
+  mov  ax,dgroup
+  mov  ds,ax
+
+  cli
+  cmp  _count2,0
+  jne  readit
+  sti
+  mov  ax,-1
+  jmp  exit2
+;
+ readit:
+;
+  sti
+  mov  bx,_spos2
+  mov  al,_megatek_buffer[bx]
+
+  sub  ah,ah
+
+  inc  _spos2
+  dec  _count2
+  cli
+  cmp  _count2,0
+  je   init2
+
+exit2:
+
+  sti
+  pop  ds
+  pop  bx
+
+  mov  sp,bp
+  pop  bp
+  ret
+;
+ init2:
+;
+  mov  _spos2,0
+  mov  _epos2,0
+  cmp  megatek_gauge_status,0
+  je   exit2
+  sti
+  mov  megatek_gauge_status,0
+  mov  al,ctrl_Q
+  push ax
+  call _megatek_out
+  add  sp,2
+  jmp  exit2
+;
+  _read_megatek_buffer endp
+
+_text ends
+      end
+

@@ -1,0 +1,371 @@
+; icu.4c
+;
+; Unigraphics emulator for C interface
+;
+; Revision History
+;
+;    7/09/88   Added call to Megatek_Update
+;              This routine will check for any pending action
+;              (previously set by megatek functions) and execute
+;              appropriate code.
+
+;    8/13/88   Moved ICU response code to C routine
+
+;    8/22/88   increased nop loop count from 500 to 30000
+;              for 386 machine
+
+;    9/14/88   moved call to Megatek_Update
+
+;   10/07/88   modified main icu loop:  if host data found,
+;              exclude joystick check from next loop; joystick 
+;              checked only in absence of host or keyboard data
+
+;   10/17/88   changed icu loop back to include joystick processing
+
+;   11/04/88   new call to pckb written in C
+;
+;   02/09/89   1. call to C function for alt_functions (pfk light codes)
+;              2. removed "unexpected character after escape" message
+;
+;   10/27/89   copied this routine from common directory
+;              for use with HyperD135 V1.29
+;
+;              - eliminated 30000 loops for use with CodeView
+;
+;    11/01/89  moved megatek_update call to top of message_monitor proc
+;    11/03/89  moved it back!  added character_count to reduce unnecessary
+;              calls
+;
+;    11/22/89  added call to megatek_update upon entry to message_monitor
+;              hope to fix problem whith EXPAND/UNEXPAND WORK VIEW after
+;              zoom/pan/rotate
+;
+;
+;    1/9/1990  removed   show_mm_entry  stuff so this file can be shared
+;
+;
+
+
+  cr      equ   13
+  ctrl_P  equ   16
+  escape  equ   27
+;
+  
+_TEXT   SEGMENT  BYTE PUBLIC 'CODE'
+_TEXT   ENDS
+
+_DATA   SEGMENT  WORD PUBLIC 'DATA'
+
+  _js_flag     		db   	0
+  character_count	dw	0
+
+_DATA   ENDS
+
+CONST   SEGMENT  WORD PUBLIC 'CONST'
+CONST   ENDS
+
+_BSS            SEGMENT  WORD PUBLIC 'BSS'
+_BSS      ENDS
+
+DGROUP  GROUP   CONST,  _BSS,   _DATA
+        ASSUME  CS: _TEXT, DS: DGROUP, SS: DGROUP, ES: DGROUP
+
+
+PUBLIC _message_monitor
+PUBLIC _icu
+PUBLIC send_to_host
+PUBLIC _set_joystick
+PUBLIC _js_flag
+
+
+EXTRN  _alt_functions:far
+EXTRN  _my_pckb:far
+EXTRN  _megatek_device:far
+EXTRN  _megatek_update:far
+EXTRN  _which_icu:far
+EXTRN  _joystick:far
+EXTRN  _read_host_buffer:far
+EXTRN  _ugout:far
+EXTRN  _mm_filter:far
+EXTRN  _matrix_update:far
+;
+;
+; DEBUG ONLY!!!!!!
+;
+;  EXTRN  _show_mm_entry:far
+;
+;
+; -------------------------------------------------------------
+  _text segment
+;
+  assume cs:_text, ds:dgroup, es:dgroup
+;
+; ---------------------------------------
+ send_to_host proc far
+;
+  push ax
+  call _ugout
+  add  sp,2
+  ret
+;
+ send_to_host endp
+; ---------------------------------------
+ _set_joystick proc far
+
+  push bp
+  mov  bp,sp
+  sub  sp,2
+
+  push ax
+  push ds
+
+  mov  ax,dgroup
+  mov  ds,ax
+;
+  mov  ax,[bp+6]
+;
+  cmp  ax,1
+  je   set_flag
+  mov  _js_flag,0
+  jmp  js_end
+
+set_flag:
+
+  mov  _js_flag,1
+
+js_end:
+  
+;
+  pop  ds
+  pop  ax
+
+  mov  sp,bp
+  pop  bp
+  ret
+
+ _set_joystick endp
+; --------------------------------------
+ _message_monitor proc far
+
+  push bp
+  mov  bp,sp
+
+  push ax
+  push ds
+
+  mov  ax,dgroup
+  mov  ds,ax
+;
+;  call _megatek_update
+;
+   call _matrix_update
+;
+ mm_top:
+;
+  cmp  _js_flag,1	 ; is joystick enabled?
+  jne  check_kb1 	 ; if not, check keyboard
+
+  call _joystick	 ; else, service joystick
+;
+check_kb1:
+;
+  call _my_pckb		 ; check keyboard
+
+  call _read_host_buffer ; Check for Host data
+  cmp  ax,-1
+  je   mm_top		 ; no host data found, poll devices and try again.
+
+;
+mm:
+;
+
+; Host data found...
+
+  cmp  al,escape           ; look for escape
+  je   escape_sequence
+
+  inc  character_count
+
+  push ax
+  call _mm_filter
+  add sp,2
+
+  cmp  character_count,1
+  ja   mm_top
+
+  call _megatek_update
+
+  jmp  mm_top
+;
+escape_sequence:
+;
+  call _read_host_buffer    ; get next character
+  cmp  ax,-1
+  jne  escape_zero
+  jmp  escape_sequence     ; loop until it arrives
+;
+escape_zero:
+;
+  mov  character_count,0
+
+  cmp  al,'0'      ; system reset
+  jne  escape_one
+  jmp  mm_top
+;
+escape_one:
+;
+
+; EXIT FROM MESSAGE MONITOR TO GRAPHICS DEVICE
+
+  cmp  al,'1'      ; transparent data
+  jne  escape_two
+  jmp  mm_end
+;
+escape_two:
+;  
+  cmp  al,'2'        ; light control
+  jne  escape_three
+  call _alt_functions
+  jmp  mm_top        ; end of light data
+;
+escape_three:
+;
+  cmp  al,'3'        ; screen edit mode
+  jne  escape_four
+  jmp  mm_top        ; not implemented
+;    
+escape_four:
+;
+  cmp  al,'4'
+  jne  escape_five
+  jmp  mm_top
+;
+escape_five:
+;
+  cmp  al,'5'
+  jne  ignored
+;
+  call _which_icu
+
+  jmp  mm_top
+
+;
+ignored:
+;
+
+; unexpected character after escape
+
+  jmp  mm_top
+
+;
+ mm_end:
+;
+  pop  ds
+  pop  ax
+
+  mov  sp,bp
+  pop  bp
+  ret
+
+ _message_monitor endp
+;-----------------------------------------------------------------
+; Main UG Entry Point
+;
+  _icu  proc  far
+;
+  push bp
+  mov  bp,sp
+
+  push ds
+  push es
+
+  mov  ax,dgroup
+  mov  ds,ax
+  mov  es,ax
+;
+begin_mm:
+
+; re-structured for d100c code
+;
+;  call _show_mm_entry
+;
+;
+  call _message_monitor
+;
+begin_tdata:
+;
+  cmp  _js_flag,1
+  jne  check_kb
+;
+  call _joystick
+;
+check_kb:
+;
+  call _my_pckb
+;
+ check_host:
+;
+  call _read_host_buffer
+  cmp  ax,-1
+  je   begin_tdata
+;
+; Host data found...
+; Check for possible entry to message monitor emulation
+;
+  cmp  al,ctrl_P
+  jne  continue
+;
+;  ctrl-p handler.  possible entry into message monitor
+;
+ cp1:
+;
+  call _read_host_buffer
+  cmp  ax,-1
+  jne  cp1a
+
+;  push  cx
+;  mov  cx,30000
+;  looper3:
+;       nop
+;       loop looper3
+;  pop  cx
+ 
+   jmp  cp1
+;
+ cp1a:
+;
+  cmp  al,cr
+  jne  cp2
+  jmp  begin_mm
+;
+ cp2:
+;
+  push ax
+  call _megatek_device
+  add  sp,2
+  jmp  begin_tdata
+;
+; continue graphics emulation
+;
+ continue:
+
+  push ax
+  call _megatek_device
+  add  sp,2
+  jmp  begin_tdata
+;
+ tdata_end:
+;
+  pop  es
+  pop  ds
+
+  mov  sp,bp
+  pop  bp
+  ret
+;
+_icu  endp
+;
+
+_text  ends
+       end
+

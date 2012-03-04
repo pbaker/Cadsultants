@@ -1,0 +1,26 @@
+find "%1" MY7.C > lpt1
+find "%1" DISPLAY.C > lpt1
+find "%1" HPGLMENU.C > lpt1
+find "%1" INDICATO.C > lpt1
+find "%1" MMFILTER.C > lpt1
+find "%1" MY12.C > lpt1
+find "%1" MY2.C > lpt1
+find "%1" MY4.C > lpt1
+find "%1" READ_CFG.C > lpt1
+find "%1" MY8.C > lpt1
+find "%1" EXPANDED.C > lpt1
+find "%1" MY5.C > lpt1
+find "%1" PIXELBRD.C > lpt1
+find "%1" MY3.C > lpt1
+find "%1" MAKEHPGL.C > lpt1
+find "%1" MY2FUNCS.C > lpt1
+find "%1" MY6.C > lpt1
+find "%1" MY13.C > lpt1
+find "%1" MY11.C > lpt1
+find "%1" MY10.C > lpt1
+find "%1" MENUS.C > lpt1
+find "%1" M_DEVICE.C > lpt1
+find "%1" MY1SEGM.C > lpt1
+find "%1" MEGATEK.C > lpt1
+find "%1" MY1SUBR.C > lpt1
+

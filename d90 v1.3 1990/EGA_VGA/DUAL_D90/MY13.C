@@ -1,0 +1,366 @@
+#include "dos.h"
+#include "display.h"
+#include "graph.h"
+
+
+#define TRUE 1
+#define FALSE 0
+
+
+
+#define USE_COLOR_CARD  1
+#define USE_MONO_CARD  0
+
+extern char far my_text_mode;
+
+
+
+
+extern void far clrall();
+
+extern void far restore_int9();
+extern void far alt_g_restore();
+
+extern int far keyboard_status();
+extern void far megatek_device();
+extern void far clear_page();
+
+extern void far alt_menu_on();
+extern void far alt_menu_off();
+extern char far display_alt_menu;
+
+
+
+/*contains "C" versions of Paul's stuff*/
+
+
+
+union REGS far my_input_regs,far my_output_regs;
+char far type_char_read,far value_char_read;
+
+
+
+
+void far my_ugout(i)
+int i;
+{
+	ugout(i);
+}
+
+
+void far my_send_ext(ch)
+int ch;
+{
+
+	my_ugout(31);
+	my_ugout(97);
+	my_ugout(ch);
+}
+
+
+
+void far read_keyboard()
+{
+	my_input_regs.h.ah = 0;
+
+	int86(0x16,&my_input_regs,&my_output_regs);
+
+	type_char_read = my_output_regs.h.al;
+	value_char_read = my_output_regs.h.ah;
+}
+
+
+
+
+
+
+
+void far my_pckb()
+{
+
+
+	if(keyboard_status() == -1)   /*no key was pressed*/
+		return;
+
+	read_keyboard();
+
+	if(type_char_read != 0)   /*normal key*/
+	{
+		my_ugout(type_char_read);
+	}
+	else          /*extended code key*/
+	{
+		switch(value_char_read)
+		{
+			case 59 : /*F1*/
+			{
+				my_send_ext(36);
+				break;
+			}
+
+			case 60 : /*F2*/
+			{
+				my_send_ext(37);
+				break;
+			}
+
+			case 61 : /*F3*/
+			{
+				my_send_ext(38);
+				break;
+			}
+
+			case 62 : /*F4*/
+			{
+				my_send_ext(39);
+				break;
+			}
+			case 63 : /*F5*/
+			{
+				my_send_ext(40);
+				break;
+			}
+
+			case 64 : /*F6*/
+			{
+				my_send_ext(41);
+				break;
+			}
+
+			case 65 : /*F7*/
+			{
+				my_send_ext(42);
+				break;
+			}
+
+			case 66 : /*F8*/
+			{
+				my_send_ext(43);
+				break;
+			}
+
+			case 67 : /*F9*/
+			{
+				my_send_ext(44);
+				break;
+			}
+
+			case 68 : /*F10*/
+			{
+				my_send_ext(45);
+				break;
+			}
+
+
+			case 71 : /*home*/
+			{
+				if(my_text_mode == USE_MONO_CARD)
+					_setvideomode(_TEXTC80);
+
+
+				clear_display_page();
+				clrall();
+				close_board();
+				close_host();
+
+				restore_int9();
+
+				exit(1);
+
+				break;
+			}
+
+
+
+			case 82 : /*Ins key  (clear graphics monitor)*/
+			{
+				clear_page(2 /*both pages*/);
+				break;
+			}
+
+
+			case 83 : /*Del key*/
+			{
+				my_ugout(127);
+				break;
+			}
+
+			case 104 : /*alt F1*/
+			{
+				my_send_ext(46);
+				break;
+			}
+
+			case 105 : /*alt F2*/
+			{
+				my_send_ext(47);
+				break;
+			}
+
+			case 106 : /*alt F3*/
+			{
+				my_send_ext(48);
+				break;
+			}
+
+			case 107 : /*alt F4*/
+			{
+				my_send_ext(49);
+				break;
+			}
+
+			case 75 : /*reject (left arrow)*/
+			{
+				my_send_ext(61);
+				break;
+			}
+
+			case 77 : /*entry complete (right arrow)*/
+			{
+				my_send_ext(60);
+				break;
+			}
+
+
+
+			case 79 : /*End key(toggle display of alt menu on/off)*/
+			{
+				if(display_alt_menu == TRUE)
+					alt_menu_off();
+				else
+					alt_menu_on();
+
+
+				break;
+			}
+
+
+
+			case 80 : /*terminate (down arrow)*/
+			{
+				my_send_ext(62);
+				break;
+			}
+
+			case 72 : /*alternate action (up arrow)*/
+			{
+				my_send_ext(63);
+				break;
+			}
+
+
+			case 73 : /*redisplay (PgUp)*/
+			{
+				my_send_ext(35);
+				break;
+			}
+
+
+
+			case 81 :  /* PgDn */
+			case 34 :  /* alt G */
+			{
+				alt_g_restore();
+
+				break;
+			}
+
+
+			case 30 : /*alternate action (alt A)*/
+			{
+				my_send_ext(63);
+				break;
+			}
+
+			case 48 : /*blank/unblank (alt B)*/
+			{
+				my_send_ext(50);
+				break;
+			}
+
+			case 46 : /*calculator (alt C)*/
+			{
+				my_send_ext(51);
+				break;
+			}
+
+			case 32 : /*display control (alt D)*/
+			{
+				my_send_ext(58);
+				break;
+			}
+
+			case 18 : /*edit work view (alt E)*/
+			{
+				my_send_ext(59);
+				break;
+			}
+
+			case 33 : /*file/terminate (alt F)*/
+			{
+				my_send_ext(34);
+				break;
+			}
+
+			case 38 : /*layer (alt L)*/
+			{
+				my_send_ext(57);
+				break;
+			}
+
+			case 50 : /*macros (alt M)*/
+			{
+				my_send_ext(32);
+				break;
+			}
+
+			case 120 : /*change module (alt 1)*/
+			{
+				my_send_ext(33);
+				break;
+			}
+
+			case 121 : /*module function (alt 2)*/
+			{
+				my_send_ext(55);
+				break;
+			}
+
+			case 122 : /*module parameters (alt 3)*/
+			{
+				my_send_ext(52);
+				break;
+			}
+
+			case 19 : /*redisplay (alt R)*/
+			{
+				my_send_ext(35);
+				break;
+			}
+
+			case 31 : /*system parameters (alt S)*/
+			{
+				my_send_ext(53);
+				break;
+			}
+
+			case 17 : /*wcs control (alt W)*/
+			{
+				my_send_ext(54);
+				break;
+			}
+
+			case 44 : /*zoom/pan/regen (alt Z)*/
+			{
+				my_send_ext(56);
+				break;
+			}
+		}
+	}
+
+}
+
+
+
+
+

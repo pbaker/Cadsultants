@@ -1,0 +1,9 @@
+10 CLS
+20 OPEN "com1:9600,n,8,1,rs,cs,ds,cd,bin" AS 1
+30 IF LOC(1) = 0 THEN GOTO 30
+55 A$ = INPUT$(1,1)
+60 A=ASC(A$)
+65 A = A AND 127
+70 PRINT A
+120 GOTO 30
+
